@@ -123,9 +123,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 #dropzone.drag-over{border-color:var(--accent);background:var(--blue-light);transform:scale(1.01);box-shadow:0 0 0 4px var(--accent-glow);}
 #dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 #dropzone .dz-icon{font-size:3rem;margin-bottom:14px;}
-#dropzone h2{font-size:1.1rem;font-weight:600;color:#37474f;margin-bottom:6px;}
-#dropzone p{font-size:0.82rem;color:#78909c;}
-#dropzone .dz-hint{margin-top:12px;font-size:0.75rem;color:#b0bec5;}
+#dropzone h2{font-size:1.1rem;font-weight:600;color:var(--text);margin-bottom:6px;}
+#dropzone p{font-size:0.82rem;color:var(--text-muted);}
+#dropzone .dz-hint{margin-top:12px;font-size:0.75rem;color:var(--text-light);}
 /* CONTENT */
 #content-area{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0;}
 /* TOOLBAR */
@@ -169,9 +169,9 @@ table.qb-table thead th:last-child{border-right:none;}
 table.qb-table thead th:hover{background:#1a3050;}
 table.qb-table thead th.sort-asc::after{content:' ▲';font-size:0.6rem;opacity:0.8;}
 table.qb-table thead th.sort-desc::after{content:' ▼';font-size:0.6rem;opacity:0.8;}
-table.qb-table thead tr.filter-row th{background:#f8fafc;padding:4px 6px;border-bottom:2px solid var(--border);cursor:default;}
-table.qb-table thead tr.filter-row th:hover{background:#f8fafc;}
-.col-filter{width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:0.72rem;font-family:inherit;outline:none;background:#fff;}
+table.qb-table thead tr.filter-row th{background:var(--surface2);padding:4px 6px;border-bottom:2px solid var(--border);cursor:default;}
+table.qb-table thead tr.filter-row th:hover{background:var(--surface2);}
+.col-filter{width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:0.72rem;font-family:inherit;outline:none;background:var(--surface);color:var(--text);}
 .col-filter:focus{border-color:var(--accent);}
 table.qb-table tbody tr{border-bottom:1px solid var(--border-light);transition:background 0.1s;}
 table.qb-table tbody tr:hover{background:var(--row-hover);}
@@ -244,7 +244,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
 .stab-content.active{display:block;}
 /* editable modifier table */
 .mod-table{width:100%;border-collapse:collapse;font-size:0.8rem;}
-.mod-table th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:600;font-size:0.72rem;color:var(--text-muted);border-bottom:2px solid var(--border);}
+.mod-table th{background:var(--surface2);padding:8px 10px;text-align:left;font-weight:600;font-size:0.72rem;color:var(--text-muted);border-bottom:2px solid var(--border);}
 .mod-table td{padding:6px 10px;border-bottom:1px solid var(--border-light);}
 .mod-table tr:hover td{background:var(--row-hover);}
 .mod-input{padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;width:80px;outline:none;}
@@ -257,7 +257,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
 .bp-group label{color:var(--text-muted);font-weight:600;font-size:0.76rem;}
 .bp-result{background:var(--blue-light);border-radius:6px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);font-size:0.82rem;}
 .bp-result.green{background:#d1fae5;color:var(--green);}
-.bp-result.amber{background:#fef3c7;color:#b45309;}
+.bp-result.amber{background:var(--amber-bg);color:var(--amber);}
 .bp-input{width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.8rem;outline:none;background:var(--bg);}
 .bp-input:focus{border-color:var(--accent);}
 #bonus-panel-wrap{display:none;}
@@ -635,7 +635,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             </label>
           </div>
         </div>
-        <div id="imp-ir-notice" style="display:none;padding:10px 14px;background:#fef3c7;border-radius:8px;border-left:3px solid var(--amber);font-size:0.78rem;color:#92400e;margin-top:-6px;">
+        <div id="imp-ir-notice" style="display:none;padding:10px 14px;background:var(--amber-bg);border-radius:8px;border-left:3px solid var(--amber);font-size:0.78rem;color:var(--amber);margin-top:-6px;">
           ⚡ <strong>IR Project:</strong> All fix task points will be multiplied by ×1.5. SQM bonus multiplier does not apply.
         </div>
         <div class="opt-row">
@@ -699,7 +699,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
         <div class="settings-info">Fix Quality % = Fix Tasks ÷ (Fix + Refix + Warnings). This modifier controls % of bonus actually paid out per tech.</div>
         <div style="overflow-y:auto;max-height:420px;border:1px solid var(--border);border-radius:8px;">
           <table class="mod-table" style="width:100%">
-            <thead style="position:sticky;top:0;z-index:2;background:#f1f5f9;"><tr><th>Quality % Lower</th><th>Quality % Upper</th><th>% of Bonus Earned</th></tr></thead>
+            <thead style="position:sticky;top:0;z-index:2;background:var(--surface2);"><tr><th>Quality % Lower</th><th>Quality % Upper</th><th>% of Bonus Earned</th></tr></thead>
             <tbody id="quality-table-body"></tbody>
           </table>
         </div>
@@ -801,7 +801,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           </div>
         </div>
 
-        <div style="margin-top:16px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:0.75rem;color:var(--text-muted);border:1px solid var(--border-light);">
+        <div style="margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:0.75rem;color:var(--text-muted);border:1px solid var(--border-light);">
           <strong>How detection works:</strong>
           Refix = label in <em>Refix Labels</em> found in any <em>Refix Columns</em>.
           Miss = label in <em>Miss Labels</em> found in any <em>Miss Columns</em>.
@@ -815,7 +815,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div class="stab-content" id="tab-bonus">
         <div class="settings-info">Configure bonus tier overrides. When Fix Quality % meets a threshold, that <strong>Bonus Earned %</strong> replaces the standard quality tier lookup. Formula: Points × Multiplier × (Bonus Earned % ÷ 100).</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px;">
-          <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid var(--border-light);">
+          <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border-light);">
             <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:12px;">🏆 Top Tier</div>
             <div class="tgl-row">
               <label style="min-width:130px;">Quality % Threshold</label>
@@ -828,7 +828,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
               <span style="font-size:0.75rem;color:var(--text-muted);margin-left:4px;">%</span>
             </div>
           </div>
-          <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid var(--border-light);">
+          <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border-light);">
             <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--green);margin-bottom:12px;">✅ Mid Tier</div>
             <div class="tgl-row">
               <label style="min-width:130px;">Quality % Threshold</label>
@@ -999,7 +999,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
         </div>
 
         <!-- IR notice -->
-        <div id="np-ir-notice" style="display:none;padding:10px 14px;background:#fef3c7;border-radius:8px;border-left:3px solid var(--amber);font-size:0.78rem;color:#92400e;">
+        <div id="np-ir-notice" style="display:none;padding:10px 14px;background:var(--amber-bg);border-radius:8px;border-left:3px solid var(--amber);font-size:0.78rem;color:var(--amber);">
           ⚡ <strong>IR Project:</strong> All fix task points will be multiplied by ×1.5. SQM is not used for IR projects.
         </div>
 
@@ -1044,8 +1044,8 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
               style="border:2px dashed var(--border);border-radius:10px;background:#f7f9fc;padding:18px 16px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;">
               <input type="file" id="np-file-input" accept=".zip,.dbf" multiple style="display:none" onchange="npFileChosen(this)" />
               <div id="np-dz-icon" style="font-size:1.8rem;margin-bottom:6px;">📂</div>
-              <div id="np-dz-text" style="font-size:0.82rem;font-weight:600;color:#37474f;">Drop .dbf / .zip files here</div>
-              <div id="np-dz-sub" style="font-size:0.72rem;color:#90a4ae;margin-top:3px;">or click to browse — multiple files supported</div>
+              <div id="np-dz-text" style="font-size:0.82rem;font-weight:600;color:var(--text);">Drop .dbf / .zip files here</div>
+              <div id="np-dz-sub" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">or click to browse — multiple files supported</div>
             </div>
             <!-- file list -->
             <div id="np-file-list" style="margin-top:8px;display:none;max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);">
@@ -1189,9 +1189,9 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           <code style="font-size:0.84rem;">Payout = TotalPoints × Multiplier × (BonusEarned% ÷ 100)</code>
           <div style="margin-top:8px;color:var(--text-muted);">BonusEarned% is looked up from the Quality % Modifier table. Multiplier is set in the Bonus Calculator panel.</div>
         </div>
-        <div style="background:#fef3c7;border-radius:10px;padding:14px 16px;font-size:0.78rem;border-left:4px solid var(--amber);">
-          <div style="font-weight:700;margin-bottom:6px;color:#92400e;">★ Threshold bonus (overrides if quality ≥ threshold)</div>
-          <div id="about-threshold-text" style="color:#92400e;line-height:1.7;"></div>
+        <div style="background:var(--amber-bg);border-radius:10px;padding:14px 16px;font-size:0.78rem;border-left:4px solid var(--amber);">
+          <div style="font-weight:700;margin-bottom:6px;color:var(--amber);">★ Threshold bonus (overrides if quality ≥ threshold)</div>
+          <div id="about-threshold-text" style="color:var(--amber);line-height:1.7;"></div>
         </div>
       </div>
 
@@ -1215,9 +1215,67 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       </div>
 
       <!-- ⑥ Missed / Rework note -->
-      <div style="background:#fef2f2;border-radius:10px;padding:14px 16px;font-size:0.78rem;border-left:4px solid var(--red);margin-bottom:8px;">
+      <div style="background:var(--red-bg);border-radius:10px;padding:14px 16px;font-size:0.78rem;border-left:4px solid var(--red);margin-bottom:20px;">
         <div style="font-weight:700;margin-bottom:6px;color:var(--red);">⚠ Missed / Rework — attribution rule</div>
-        <div style="color:#7f1d1d;line-height:1.7;" id="about-miss-text"></div>
+        <div style="color:var(--red);line-height:1.7;" id="about-miss-text"></div>
+      </div>
+
+      <!-- ⑦ i3 Penalty Structure -->
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:4px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--red);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">7</span>
+          i3 Penalty Structure <span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);margin-left:4px;">(feedback by i3qa only)</span>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">
+          <b>Egregious Categories: Cat 1, 2, 3</b> &nbsp;·&nbsp; Deductions per Egregious Count (project per cut-off)
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
+            <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+              <th style="padding:8px 12px;text-align:left;">DR Level</th>
+              <th style="padding:8px 12px;text-align:left;">Egregious Count Range</th>
+              <th style="padding:8px 12px;text-align:left;">Action</th>
+              <th style="padding:8px 12px;text-align:right;">Fixpoints Deduction</th>
+            </tr></thead>
+            <tbody>
+              <tr style="background:var(--bg)"><td style="padding:7px 12px;"><span style="background:#dc2626;color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DR1</span></td><td style="padding:7px 12px;">30 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Coaching Memo</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-30 pts</td></tr>
+              <tr style="background:var(--surface)"><td style="padding:7px 12px;"><span style="background:#dc2626;color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DR2</span></td><td style="padding:7px 12px;">50 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Coaching Memo</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-50 pts</td></tr>
+              <tr style="background:var(--bg)"><td style="padding:7px 12px;"><span style="background:#dc2626;color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DR3</span></td><td style="padding:7px 12px;">70 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Written Warning and Notice to Explain</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-100 pts</td></tr>
+              <tr style="background:var(--surface)"><td style="padding:7px 12px;"><span style="background:#dc2626;color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DR4</span></td><td style="padding:7px 12px;">100 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Written Warning and Notice to Explain</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-200 pts</td></tr>
+              <tr style="background:var(--bg)"><td style="padding:7px 12px;"><span style="background:#dc2626;color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DR5</span></td><td style="padding:7px 12px;">200 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Coaching Memo with Class B-1 Offenses</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-500 pts</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:0.73rem;color:var(--text-muted);padding-left:4px;">• <b>Class B-1:</b> These are moderate offenses with a 4-offense progression leading to termination</div>
+      </div>
+
+      <!-- ⑧ i3QA Penalty Structure -->
+      <div style="margin-bottom:8px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:4px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--amber);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">8</span>
+          i3QA Penalty Structure <span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);margin-left:4px;">(feedback by RV's and US)</span>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">
+          <b>Egregious Categories: Cat 1, 2, 3</b> &nbsp;·&nbsp; Deductions per Egregious Count (project per cut-off)
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
+            <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+              <th style="padding:8px 12px;text-align:left;">DRQ Level</th>
+              <th style="padding:8px 12px;text-align:left;">Egregious Count Range</th>
+              <th style="padding:8px 12px;text-align:left;">Action</th>
+              <th style="padding:8px 12px;text-align:right;">Fixpoints Deduction</th>
+            </tr></thead>
+            <tbody>
+              <tr style="background:var(--bg)"><td style="padding:7px 12px;"><span style="background:var(--amber);color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DRQ1</span></td><td style="padding:7px 12px;">10 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Coaching Memo</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-30 pts</td></tr>
+              <tr style="background:var(--surface)"><td style="padding:7px 12px;"><span style="background:var(--amber);color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DRQ2</span></td><td style="padding:7px 12px;">20 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Coaching Memo</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-50 pts</td></tr>
+              <tr style="background:var(--bg)"><td style="padding:7px 12px;"><span style="background:var(--amber);color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DRQ3</span></td><td style="padding:7px 12px;">50 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Written Warning and Notice to Explain</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-100 pts</td></tr>
+              <tr style="background:var(--surface)"><td style="padding:7px 12px;"><span style="background:var(--amber);color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DRQ4</span></td><td style="padding:7px 12px;">100 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Written Warning and Notice to Explain</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-200 pts</td></tr>
+              <tr style="background:var(--bg)"><td style="padding:7px 12px;"><span style="background:var(--amber);color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;">DRQ5</span></td><td style="padding:7px 12px;">200 Counts</td><td style="padding:7px 12px;color:var(--text-muted)">Coaching Memo with Class B-1 Offenses</td><td style="padding:7px 12px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--red);font-weight:700;">-500 pts</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:0.73rem;color:var(--text-muted);padding-left:4px;">• <b>Class B-1:</b> These are moderate offenses with a 4-offense progression leading to termination</div>
       </div>
 
     </div>
@@ -1955,7 +2013,7 @@ function renderTable(){
   const tbody=document.getElementById('table-body');
   if(!page.length){tbody.innerHTML=`<tr><td colspan="15" class="empty-state"><div class="es-icon">🔍</div><p>No records match.</p></td></tr>`;renderFoot([]);updatePagination();return;}
   tbody.innerHTML=page.map(r=>{
-    const irTag=r.ir==='IR'?'<span style="color:#b45309;font-weight:700;font-size:0.7rem;background:#fef3c7;padding:1px 5px;border-radius:3px;">IR</span>':r.ir==='COMBO'?'<span style="color:#6d28d9;font-weight:700;font-size:0.7rem;background:#ede9fe;padding:1px 5px;border-radius:3px;">COMBO</span>':'—';
+    const irTag=r.ir==='IR'?'<span style="color:var(--amber);font-weight:700;font-size:0.7rem;background:var(--amber-bg);padding:1px 5px;border-radius:3px;">IR</span>':r.ir==='COMBO'?'<span style="color:var(--purple);font-weight:700;font-size:0.7rem;background:var(--purple-bg);padding:1px 5px;border-radius:3px;">COMBO</span>':'—';
     const uidShort=r.uid.length>32?r.uid.slice(0,30)+'…':r.uid;
     return `<tr>
       <td><button class="eye-btn" title="Details">👁</button></td>
@@ -1989,7 +2047,7 @@ function renderFoot(rows){
 // ═══════════════════════════════════════════════════════════════
 // RENDER TECH TABLE
 // ═══════════════════════════════════════════════════════════════
-const TEAM_COLORS={'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
+const isDark=document.documentElement.getAttribute('data-theme')==='dark';const TEAM_COLORS=isDark?{'T_63':'rgba(14,165,233,0.12)','T_115':'rgba(245,158,11,0.12)','T_57':'rgba(16,185,129,0.12)','T_116':'rgba(236,72,153,0.12)','T_123':'rgba(139,92,246,0.12)','T_114':'rgba(239,68,68,0.12)','T_64':'rgba(5,150,105,0.12)','T_122':'rgba(251,146,60,0.12)'}:{'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
 
 function renderTechTable(){
   const tbody=document.getElementById('tech-body');
@@ -2995,7 +3053,7 @@ function renderCalcAllTable(data){
   }
   tbl.style.display=''; empty.style.display='none';
 
-  const TEAM_COLORS={'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';const TEAM_COLORS=isDark?{'T_63':'rgba(14,165,233,0.12)','T_115':'rgba(245,158,11,0.12)','T_57':'rgba(16,185,129,0.12)','T_116':'rgba(236,72,153,0.12)','T_123':'rgba(139,92,246,0.12)','T_114':'rgba(239,68,68,0.12)','T_64':'rgba(5,150,105,0.12)','T_122':'rgba(251,146,60,0.12)'}:{'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
   const ns='class="cell-num cell-num-blue"';
 
   document.getElementById('ca-body').innerHTML = data.map(t=>{
@@ -3194,6 +3252,7 @@ function openDrillDown(techId, stat) {
         I3QA_ID:row.i3qa_id, I3QA_LABEL:row.i3qa_label,
         I3QA_CAT:row._raw?.I3QA_CAT || row._raw?.i3qa_cat || '—',
         FIX1_ID:row.fix1_id, FIX1_DATE:row.fix1_date,
+        'FIXED1?': row.fixed1 || row._raw?.['FIXED1?'] || row._raw?.FIXED1 || '',
         RV1_ID:row.rv1_id, RV1_LABEL:row.rv1_label, 'COMBO?':row.ir,
         _processed:true, _allFix: [row.fix1_id, row._raw?.FIX2_ID, row._raw?.FIX3_ID, row._raw?.FIX4_ID, row._raw?.FIX5_ID].filter(Boolean)
       };
@@ -3233,9 +3292,9 @@ function openDrillDown(techId, stat) {
     const isAllIR = irVal === 'IR';
     const isCombo = irVal === 'COMBO' || irVal === 'Y';
     const irTag = isAllIR
-      ? '<span style="color:#b45309;font-weight:700;font-size:0.68rem;background:#fef3c7;padding:1px 4px;border-radius:3px;">IR</span>'
+      ? '<span style="color:var(--amber);font-weight:700;font-size:0.68rem;background:var(--amber-bg);padding:1px 4px;border-radius:3px;">IR</span>'
       : isCombo
-      ? '<span style="color:#6d28d9;font-weight:700;font-size:0.68rem;background:#ede9fe;padding:1px 4px;border-radius:3px;">COMBO</span>'
+      ? '<span style="color:var(--purple);font-weight:700;font-size:0.68rem;background:var(--purple-bg);padding:1px 4px;border-radius:3px;">COMBO</span>'
       : '—';
     const pts = showPts ? rowPts(r) : 0;
     grandPts += pts;
@@ -3248,7 +3307,7 @@ function openDrillDown(techId, stat) {
     const missLabels = S.detect.triggers.miss.labels.map(l => l.toLowerCase());
     const rowI3qaLabel = (r['I3QA_LABEL'] || r.i3qa_label || '').trim().toLowerCase();
     const isMissRow = stat === 'missed' && missLabels.includes(rowI3qaLabel);
-    const rowBg = isMissRow ? 'background:#fef2f2;' : '';
+    const rowBg = isMissRow ? 'background:var(--red-bg);' : '';
     return `<tr style="cursor:pointer;${rowBg}" onclick="jumpToRow('${uid}')" title="Click to jump to this record in Tasks view">
       ${COLS.map(c => {
         if (c==='COMBO?') return `<td style="text-align:center">${irTag}</td>`;
@@ -3257,7 +3316,7 @@ function openDrillDown(techId, stat) {
         if (c==='I3QA_LABEL') {
           const lv = (r[c] || r.i3qa_label || '—').toString();
           const isMissLabel = missLabels.includes(lv.trim().toLowerCase());
-          return `<td style="text-align:center"><span style="font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;${isMissLabel?'background:#fca5a5;color:#991b1b;':'color:var(--text-muted)'}">${lv}</span></td>`;
+          return `<td style="text-align:center"><span style="font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;${isMissLabel?'background:var(--red-border);color:var(--red);':'color:var(--text-muted)'}">${lv}</span></td>`;
         }
         // QC_ID in missed view: highlight because this tech owns the penalty
         if (c==='QC_ID' && stat === 'missed') {
@@ -3277,6 +3336,78 @@ function openDrillDown(techId, stat) {
 
   // totals footer
   if (showPts) {
+    // ── Initial Tagging: transparent points breakdown ─────────
+    if (stat === 'initial') {
+      const rawEarned = grandPts;
+      const qcPtVal   = cs.points.qc;
+      // Count penalty rows (I3QA_LABEL = M or E) among this tech's initial rows
+      const penLabelsUC = (S.detect.triggers.qcPenalty.labels || ['m','e']).map(l=>l.toUpperCase());
+      const penRows = unique.filter(r => {
+        const lbl = (r['I3QA_LABEL'] || r.i3qa_label || '').trim().toUpperCase();
+        return penLabelsUC.includes(lbl);
+      });
+      const penCount  = penRows.length;
+      const penDeduct = penCount * qcPtVal;
+      const netPts    = rawEarned - penDeduct;
+
+      document.getElementById('dd-foot').innerHTML = `
+        <tr style="background:var(--surface2);">
+          <td colspan="${COLS.length + 1}" style="padding:12px 14px;">
+            <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;font-size:0.78rem;">
+
+              <!-- Earned breakdown -->
+              <div style="min-width:190px;">
+                <div style="font-weight:700;color:var(--text-muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Points Earned</div>
+                <div style="display:flex;flex-direction:column;gap:4px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;">
+                  <div style="display:flex;justify-content:space-between;gap:20px;">
+                    <span style="color:var(--text-muted);">Tagged rows:</span>
+                    <span style="font-weight:600;">${unique.length} × ${qcPtVal} pts</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;gap:20px;border-top:1px dashed var(--border);padding-top:3px;margin-top:2px;">
+                    <span style="color:var(--text-muted);">Gross earned:</span>
+                    <span style="font-weight:700;color:var(--accent);">+${rawEarned.toFixed(4)} pts</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Penalty breakdown -->
+              <div style="min-width:230px;">
+                <div style="font-weight:700;color:var(--text-muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">QC Penalty (i3 Miss Deduction)</div>
+                <div style="display:flex;flex-direction:column;gap:4px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;">
+                  <div style="display:flex;justify-content:space-between;gap:20px;">
+                    <span style="color:var(--text-muted);">Miss/Egregious rows:</span>
+                    <span style="font-weight:600;color:${penCount>0?'var(--red)':'var(--green)'};">${penCount}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;gap:20px;">
+                    <span style="color:var(--text-muted);">Per-row deduction:</span>
+                    <span style="font-weight:600;">${penCount>0?'−'+qcPtVal+' pts each':'—'}</span>
+                  </div>
+                  ${penCount > 0 ? `<div style="display:flex;justify-content:space-between;gap:20px;border-top:1px dashed var(--border);padding-top:3px;margin-top:2px;"><span style="color:var(--red);">Total deducted:</span><span style="font-weight:700;color:var(--red);">−${penDeduct.toFixed(4)} pts</span></div>` : `<div style="color:var(--green);font-size:0.74rem;">✓ No penalty rows — full earnings kept</div>`}
+                  ${penCount > 0 ? `<div style="margin-top:4px;padding:4px 8px;background:rgba(220,38,38,0.08);border-left:3px solid var(--red);border-radius:0 4px 4px 0;font-size:0.7rem;color:var(--text-muted);font-family:'Inter',sans-serif;">Points transferred to i3QA tech as QC Transfer bonus</div>` : ''}
+                </div>
+              </div>
+
+              <!-- Net final -->
+              <div style="min-width:190px;border-left:2px solid var(--border);padding-left:16px;">
+                <div style="font-weight:700;color:var(--text-muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Net Points (Initial Tagging)</div>
+                <div style="display:flex;flex-direction:column;gap:4px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;">
+                  <div style="display:flex;justify-content:space-between;gap:20px;">
+                    <span style="color:var(--text-muted);">Gross earned:</span>
+                    <span style="color:var(--accent);">+${rawEarned.toFixed(4)}</span>
+                  </div>
+                  ${penCount > 0 ? `<div style="display:flex;justify-content:space-between;gap:20px;"><span style="color:var(--red);">QC penalty deduct:</span><span style="color:var(--red);">−${penDeduct.toFixed(4)}</span></div>` : ''}
+                  <div style="display:flex;justify-content:space-between;gap:20px;border-top:2px solid var(--border);padding-top:5px;margin-top:3px;">
+                    <span style="font-weight:700;color:var(--text);">Net from Initial:</span>
+                    <span style="font-weight:700;font-size:0.92rem;color:${netPts < rawEarned ? 'var(--amber)' : 'var(--green)'};">${netPts.toFixed(4)} pts</span>
+                  </div>
+                  <div style="font-size:0.68rem;color:var(--text-light);margin-top:2px;font-family:'Inter',sans-serif;">Formula: (${unique.length} × ${qcPtVal}) − (${penCount} × ${qcPtVal}) = ${netPts.toFixed(4)}</div>
+                </div>
+              </div>
+
+            </div>
+          </td>
+        </tr>`;
+    } else {
     document.getElementById('dd-foot').innerHTML = `<tr style="background:var(--blue-light);">
       <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;font-weight:700;color:var(--text);">
         Total contribution from these ${unique.length} row${unique.length!==1?'s':''}
@@ -3285,14 +3416,111 @@ function openDrillDown(techId, stat) {
         ${grandPts.toFixed(4)} pts
       </td>
     </tr>`;
+    }
+  } else if (stat === 'missed') {
+    // ── Egregious penalty calculation ────────────────────────────
+    const EGREGIOUS_CATS = [1, 2, 3];
+    const I3_DR = [
+      { min:200, level:'DR5', deduct:-500 },
+      { min:100, level:'DR4', deduct:-200 },
+      { min: 70, level:'DR3', deduct:-100 },
+      { min: 50, level:'DR2', deduct: -50 },
+      { min: 30, level:'DR1', deduct: -30 },
+    ];
+    const I3QA_DRQ = [
+      { min:200, level:'DRQ5', deduct:-500 },
+      { min:100, level:'DRQ4', deduct:-200 },
+      { min: 50, level:'DRQ3', deduct:-100 },
+      { min: 20, level:'DRQ2', deduct: -50 },
+      { min: 10, level:'DRQ1', deduct: -30 },
+    ];
+
+    const egregiousRows = unique.filter(r => EGREGIOUS_CATS.includes(parseInt(r['I3QA_CAT'] || r['CATEGORY'] || 0)));
+    const eCount = egregiousRows.length;
+    const totalCount = unique.length;
+    const nonEgCount = totalCount - eCount;
+
+    // DRQ only counts egregious rows where FIXED1? = "N" (not yet fixed)
+    const drqEgregiousRows = egregiousRows.filter(r => {
+      const f = (r['FIXED1?'] || '').toString().trim().toUpperCase();
+      return f === 'N';
+    });
+    const drqECount = drqEgregiousRows.length;
+    const drqFixedExcluded = eCount - drqECount;
+
+    const drRule   = I3_DR.find(d => eCount >= d.min)     || null;
+    const drqRule  = I3QA_DRQ.find(d => drqECount >= d.min) || null;
+
+    const techPts  = tech.points || 0;
+    const drDeduct  = drRule  ? drRule.deduct  : 0;
+    const drqDeduct = drqRule ? drqRule.deduct : 0;
+    const totalDeduct = drDeduct + drqDeduct;
+    const finalPts = techPts + totalDeduct; // deductions are negative
+
+    const drBadge  = drRule  ? `<span style="background:#dc2626;color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;margin-right:4px;">${drRule.level}</span>` : '';
+    const drqBadge = drqRule ? `<span style="background:var(--amber);color:#fff;border-radius:3px;padding:1px 7px;font-weight:700;font-size:0.72rem;margin-right:4px;">${drqRule.level}</span>` : '';
+    const noBadge  = !drRule && !drqRule ? `<span style="color:var(--green);font-weight:700;">✓ No DR/DRQ triggered</span>` : '';
+
+    document.getElementById('dd-foot').innerHTML = `
+      <tr style="background:var(--surface2);">
+        <td colspan="${COLS.length}" style="padding:10px 12px;">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;font-size:0.78rem;">
+
+            <!-- Counts -->
+            <div style="min-width:160px;">
+              <div style="font-weight:700;color:var(--text-muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Miss Breakdown</div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div><span style="color:var(--text-muted);">Total missed rows:</span> <b style="color:var(--text)">${totalCount}</b></div>
+                <div><span style="color:var(--red);font-weight:600;">Egregious (Cat 1,2,3):</span> <b style="color:var(--red);font-size:1rem;">${eCount}</b></div>
+                <div style="margin-left:10px;display:flex;flex-direction:column;gap:2px;">
+                  <div><span style="color:var(--text-muted);font-size:0.72rem;">↳ FIXED1=N (unfixed):</span> <b style="color:var(--red);font-size:0.82rem;">${drqECount}</b> <span style="color:var(--text-muted);font-size:0.68rem;">← used for DRQ</span></div>
+                  ${drqFixedExcluded > 0 ? `<div><span style="color:var(--text-muted);font-size:0.72rem;">↳ FIXED1≠N (fixed/blank):</span> <b style="color:var(--green);font-size:0.82rem;">${drqFixedExcluded}</b> <span style="color:var(--text-muted);font-size:0.68rem;">← excluded from DRQ</span></div>` : ""}
+                </div>
+                <div><span style="color:var(--text-muted);">Non-egregious:</span> <b style="color:var(--text-muted)">${nonEgCount}</b></div>
+              </div>
+            </div>
+
+            <!-- DR Level -->
+            <div style="min-width:220px;">
+              <div style="font-weight:700;color:var(--text-muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Penalty Level</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="color:var(--text-muted);font-size:0.74rem;min-width:80px;">i3 Penalty:</span>
+                    ${drBadge || '<span style="color:var(--green);font-size:0.74rem;">None</span>'}
+                    ${drRule ? `<span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${drRule.deduct} pts</span>` : ''}
+                  </div>
+                  ${drRule ? `<div style="margin-left:86px;"><span style="font-size:0.67rem;background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:2px 7px;font-weight:700;letter-spacing:0.04em;">⚠ DEDUCTED FROM QC TECH</span></div>` : ''}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="color:var(--text-muted);font-size:0.74rem;min-width:80px;">i3QA Penalty:</span>
+                    ${drqBadge || '<span style="color:var(--green);font-size:0.74rem;">None</span>'}
+                    ${drqRule ? `<span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${drqRule.deduct} pts</span>` : ''}
+                    ${!drqRule && drqFixedExcluded > 0 ? `<span style="color:var(--green);font-size:0.7rem;">None — ${drqFixedExcluded} row${drqFixedExcluded!==1?'s':''} excluded (fixed)</span>` : ''}
+                  </div>
+                  ${drqRule ? `<div style="margin-left:86px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:0.67rem;background:#78350f;color:#fcd34d;border-radius:3px;padding:2px 7px;font-weight:700;letter-spacing:0.04em;">⚠ DEDUCTED FROM i3QA TECH</span><span style="font-size:0.67rem;color:var(--text-muted);margin-top:1px;">Based on ${drqECount} unfixed egregious rows (FIXED1=N)</span></div>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Points summary -->
+            <div style="min-width:260px;border-left:2px solid var(--border);padding-left:16px;">
+              <div style="font-weight:700;color:var(--text-muted);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Points Impact</div>
+              <div style="display:flex;flex-direction:column;gap:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;">
+                <div style="display:flex;justify-content:space-between;gap:24px;"><span style="color:var(--text-muted);">Base points:</span><span style="font-weight:600;color:var(--accent);">${techPts.toFixed(4)}</span></div>
+                ${drRule ? `<div style="display:flex;justify-content:space-between;gap:24px;"><span style="color:var(--red);font-size:0.74rem;">i3 Penalty (QC Tech):</span><span style="font-weight:700;color:var(--red);">${drRule.deduct} pts</span></div>` : ''}
+                ${drqRule ? `<div style="display:flex;justify-content:space-between;gap:24px;" title="${drqECount} unfixed egregious rows (FIXED1=N) → ${drqRule.level}"><span style="color:var(--red);font-size:0.74rem;">i3QA Penalty (${drqECount} unfixed):</span><span style="font-weight:700;color:var(--red);">${drqRule.deduct} pts</span></div>` : ''}
+                ${totalDeduct < 0 ? `<div style="display:flex;justify-content:space-between;gap:24px;background:rgba(220,38,38,0.07);padding:3px 6px;border-radius:4px;margin-top:2px;"><span style="color:var(--red);font-weight:700;">Total deduction:</span><span style="font-weight:700;color:var(--red);">${totalDeduct} pts</span></div>` : ''}
+                <div style="display:flex;justify-content:space-between;gap:24px;border-top:2px solid var(--border);padding-top:5px;margin-top:3px;"><span style="color:var(--text);font-weight:700;">Final points:</span><span style="font-weight:700;font-size:0.9rem;color:${finalPts >= techPts ? 'var(--green)' : 'var(--red)'};">${finalPts.toFixed(4)}</span></div>
+              </div>
+            </div>
+
+          </div>
+        </td>
+      </tr>`;
   } else {
-    document.getElementById('dd-foot').innerHTML = stat === 'missed'
-      ? `<tr style="background:#fef2f2;">
-          <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;color:var(--red);font-weight:600;">
-            ⚠ ${unique.length} Missed/Rework row${unique.length!==1?'s':''} — i3QA_LABEL matched miss labels (${S.detect.triggers.miss.labels.join(', ')}) — attributed to the <strong>QC Tech</strong> · reduces their Quality % &amp; bonus
-          </td>
-        </tr>`
-      : `<tr style="background:#fef2f2;">
+    document.getElementById('dd-foot').innerHTML = `<tr style="background:var(--red-bg);">
           <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;color:var(--red);font-weight:600;">
             ⚠ These ${unique.length} row${unique.length!==1?'s':''} reduce Quality % → hurts bonus payout
           </td>
@@ -3410,7 +3638,7 @@ function openAboutModal() {
 
   // ⑥ Miss attribution text
   document.getElementById('about-miss-text').innerHTML =
-    `When I3QA_LABEL matches <code style="background:#fecaca;padding:1px 5px;border-radius:3px;">${det.triggers.miss.labels.join(', ')}</code>, the miss is attributed to the <b>QC_ID tech</b> on that row — not the fix tech. `
+    `When I3QA_LABEL matches <code style="background:var(--red-bg);color:var(--red);padding:1px 5px;border-radius:3px;">${det.triggers.miss.labels.join(', ')}</code>, the miss is attributed to the <b>QC_ID tech</b> on that row — not the fix tech. `
     + `This means the QC tech's missed count increases, hurting their Quality %. `
     + `The fix tech is unaffected by misses.`;
 
