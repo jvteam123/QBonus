@@ -1971,7 +1971,8 @@ function buildTechStats(rawRecords) {
     // QC tech: DR based on egregious rows among their missed rows
     const missedSrc = t._src.missed || [];
     const egregiousMissed = missedSrc.filter(r => {
-      const cat = parseInt((r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0));
+      // r is a raw DBF record (flat keys) — no _raw wrapper
+      const cat = parseInt(r.I3QA_CAT || r.CATEGORY || r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0);
       return EGREGIOUS_CATS.includes(cat);
     });
     const drRule = I3_DR_TABLE.find(d => egregiousMissed.length >= d.min) || null;
@@ -1981,11 +1982,12 @@ function buildTechStats(rawRecords) {
     const i3qaSrc = t._src.i3qa || [];
     const missLabelsList = (det?.triggers?.miss?.labels || S.detect.triggers.miss.labels).map(l=>l.toUpperCase());
     const egregiousDrq = i3qaSrc.filter(r => {
-      const cat   = parseInt((r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0));
-      const label = (r._raw?.I3QA_LABEL || r.i3qa_label || '').toString().trim().toUpperCase();
+      // r is a raw DBF record (flat keys) — no _raw wrapper
+      const cat   = parseInt(r.I3QA_CAT || r.CATEGORY || r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0);
+      const label = (r.I3QA_LABEL || r._raw?.I3QA_LABEL || r.i3qa_label || '').toString().trim().toUpperCase();
       const isMiss = missLabelsList.includes(label);
-      const f    = (r._raw?.['FIXED1?'] || r._raw?.FIXED1 || '').toString().trim().toUpperCase();
-      const afp1 = (r._raw?.AFP1_STAT || '').toString().trim().toUpperCase();
+      const f    = (r['FIXED1?'] || r.FIXED1 || r._raw?.['FIXED1?'] || r._raw?.FIXED1 || '').toString().trim().toUpperCase();
+      const afp1 = (r.AFP1_STAT || r._raw?.AFP1_STAT || '').toString().trim().toUpperCase();
       return EGREGIOUS_CATS.includes(cat) && isMiss && (f === 'N' || afp1 === 'AA');
     });
     const drqRule   = I3QA_DRQ_TABLE.find(d => egregiousDrq.length >= d.min) || null;
