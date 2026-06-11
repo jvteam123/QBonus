@@ -1946,8 +1946,63 @@ function buildTechStats(rawRecords) {
     const denom = t.fixTasks + t.refixTasks + t.warnings.length;
     const qp    = denom > 0 ? (t.fixTasks / denom) * 100 : 0;
     const qualityMod = calculateQualityModifier(qp);
-    // Check bonus thresholds — if tech meets a threshold, use that PHP multiplier (flat, no extra quality mod)
     const thresholdBonus = getThresholdBonus(qp);
+
+    // ── DR / DRQ deductions ────────────────────────────────────
+    // DR  = deducted from QC tech (initial tagger) based on total egregious missed rows
+    // DRQ = deducted from i3QA tech based on egregious rows where FIXED1?=N or AFP1_STAT=AA
+    const EGREGIOUS_CATS = [1, 2, 3];
+    const I3_DR_TABLE = [
+      { min:200, level:'DR5', deduct:-500 },
+      { min:100, level:'DR4', deduct:-200 },
+      { min: 70, level:'DR3', deduct:-100 },
+      { min: 50, level:'DR2', deduct: -50 },
+      { min: 30, level:'DR1', deduct: -30 },
+    ];
+    const I3QA_DRQ_TABLE = [
+      { min:200, level:'DRQ5', deduct:-500 },
+      { min:100, level:'DRQ4', deduct:-200 },
+      { min: 50, level:'DRQ3', deduct:-100 },
+      { min: 20, level:'DRQ2', deduct: -50 },
+      { min: 10, level:'DRQ1', deduct: -30 },
+    ];
+
+    // QC tech: DR based on egregious rows among their missed rows
+    const missedSrc = t._src.missed || [];
+    const egregiousMissed = missedSrc.filter(r => {
+      const cat = parseInt((r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0));
+      return EGREGIOUS_CATS.includes(cat);
+    });
+    const drRule = I3_DR_TABLE.find(d => egregiousMissed.length >= d.min) || null;
+    const drDeduct = drRule ? drRule.deduct : 0;
+
+    // i3QA tech: DRQ based on egregious rows they reviewed where FIXED1?=N or AFP1_STAT=AA
+    const i3qaSrc = t._src.i3qa || [];
+    const missLabelsList = (det?.triggers?.miss?.labels || S.detect.triggers.miss.labels).map(l=>l.toUpperCase());
+    const egregiousDrq = i3qaSrc.filter(r => {
+      const cat   = parseInt((r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0));
+      const label = (r._raw?.I3QA_LABEL || r.i3qa_label || '').toString().trim().toUpperCase();
+      const isMiss = missLabelsList.includes(label);
+      const f    = (r._raw?.['FIXED1?'] || r._raw?.FIXED1 || '').toString().trim().toUpperCase();
+      const afp1 = (r._raw?.AFP1_STAT || '').toString().trim().toUpperCase();
+      return EGREGIOUS_CATS.includes(cat) && isMiss && (f === 'N' || afp1 === 'AA');
+    });
+    const drqRule   = I3QA_DRQ_TABLE.find(d => egregiousDrq.length >= d.min) || null;
+    const drqDeduct = drqRule ? drqRule.deduct : 0;
+
+    // Store metadata for use in detail modal and drilldown
+    t.drRule         = drRule;
+    t.drDeduct       = drDeduct;
+    t.drqRule        = drqRule;
+    t.drqDeduct      = drqDeduct;
+    t.egregiousMissedCount = egregiousMissed.length;
+    t.egregiousDrqCount    = egregiousDrq.length;
+
+    // Apply deductions to points BEFORE computing bonuses
+    t.pointsRaw  = t.points;                      // pre-deduction total, for transparency
+    t.points     = t.points + drDeduct + drqDeduct; // deductions are negative numbers
+    t.points     = Math.round(t.points * 10000) / 10000;
+
     // Alias to match existing renderTechTable column names
     t.initial       = t.qcTasks;
     t.i3qa          = t.i3qaTasks;
@@ -1958,7 +2013,6 @@ function buildTechStats(rawRecords) {
     t.missed        = t.missedTasks;
     t.qp            = qp;
     t.qualityPctMod = Math.round(qualityMod * 100 * 100) / 100;
-    // Multiplier column always shows the user's input value — threshold only changes Bonus Earned %
     t.bonusMultiplier = currentBonusMultiplier;
     t.thresholdApplied = thresholdBonus !== null;
     if (thresholdBonus !== null) {
@@ -2174,7 +2228,48 @@ function buildTechSummary(rows) {
     t.qp=denom>0?(t.fix/denom*100):100;
     t.qualityPctMod=getQualityPct(t.qp);
     const threshBonus = getThresholdBonus(t.qp);
-    // bonusMultiplier (PHP) is always the same input value regardless of threshold
+
+    // ── DR / DRQ deductions ────────────────────────────────────
+    const EGREGIOUS_CATS = [1,2,3];
+    const I3_DR_TABLE = [
+      {min:200,level:'DR5',deduct:-500},{min:100,level:'DR4',deduct:-200},
+      {min:70, level:'DR3',deduct:-100},{min:50, level:'DR2',deduct:-50},
+      {min:30, level:'DR1',deduct:-30},
+    ];
+    const I3QA_DRQ_TABLE = [
+      {min:200,level:'DRQ5',deduct:-500},{min:100,level:'DRQ4',deduct:-200},
+      {min:50, level:'DRQ3',deduct:-100},{min:20, level:'DRQ2',deduct:-50},
+      {min:10, level:'DRQ1',deduct:-30},
+    ];
+    const missLbls = S.detect.triggers.miss.labels.map(l=>l.toUpperCase());
+
+    const missedSrc = t._src?.missed || [];
+    const egregiousMissed = missedSrc.filter(r=>{
+      const cat=parseInt(r._raw?.I3QA_CAT||r._raw?.CATEGORY||r.category||0);
+      return EGREGIOUS_CATS.includes(cat);
+    });
+    const drRule   = I3_DR_TABLE.find(d=>egregiousMissed.length>=d.min)||null;
+
+    const i3qaSrc = t._src?.i3qa || [];
+    const egregiousDrq = i3qaSrc.filter(r=>{
+      const cat  =parseInt(r._raw?.I3QA_CAT||r._raw?.CATEGORY||r.category||0);
+      const label=(r._raw?.I3QA_LABEL||r.i3qa_label||'').toString().trim().toUpperCase();
+      const f    =(r._raw?.['FIXED1?']||r._raw?.FIXED1||'').toString().trim().toUpperCase();
+      const afp1 =(r._raw?.AFP1_STAT||'').toString().trim().toUpperCase();
+      return EGREGIOUS_CATS.includes(cat)&&missLbls.includes(label)&&(f==='N'||afp1==='AA');
+    });
+    const drqRule  = I3QA_DRQ_TABLE.find(d=>egregiousDrq.length>=d.min)||null;
+
+    t.drRule             = drRule;
+    t.drDeduct           = drRule  ? drRule.deduct  : 0;
+    t.drqRule            = drqRule;
+    t.drqDeduct          = drqRule ? drqRule.deduct : 0;
+    t.egregiousMissedCount = egregiousMissed.length;
+    t.egregiousDrqCount    = egregiousDrq.length;
+
+    t.pointsRaw = t.points;
+    t.points    = Math.round((t.points + t.drDeduct + t.drqDeduct)*10000)/10000;
+
     t.bonusMultiplier = currentBonusMultiplier;
     if (threshBonus !== null) {
       t.thresholdApplied = true;
@@ -2272,7 +2367,10 @@ function renderTechTable(){
       <td class="cell-num cell-num-blue">${dd('missed',t.missed)}</td>
       <td class="cell-num cell-num-blue">${dd('refix',t.refix)}</td>
       <td class="cell-num cell-num-blue">${dd('warn',t.warn)}</td>
-      <td class="cell-points">${t.points.toFixed(4)}</td>
+      <td class="cell-points" style="${(t.drDeduct||0)+(t.drqDeduct||0)<0?'color:var(--red);background:rgba(220,38,38,0.05);':''}" title="${(t.drDeduct||0)+(t.drqDeduct||0)<0?`Before deductions: ${(t.pointsRaw||t.points).toFixed(4)} pts | DR: ${t.drDeduct||0} | DRQ: ${t.drqDeduct||0}`:'Net points (no deductions)'}">
+        ${t.points.toFixed(4)}
+        ${(t.drDeduct||0)+(t.drqDeduct||0)<0?`<div style="font-size:0.59rem;color:var(--red);font-weight:700;line-height:1.2;margin-top:1px;white-space:nowrap;">${[(t.drDeduct||0)<0?`DR${t.drDeduct}`:'',(t.drqDeduct||0)<0?`DRQ${t.drqDeduct}`:''].filter(Boolean).join(' ')}</div>`:''}
+      </td>
       <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
       <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.05)">${(t.baseBonus||0).toFixed(4)}</td>
@@ -4427,7 +4525,27 @@ function openTechDetail(techId) {
       ${_kv('Warnings', tech.warn, tech.warn>0?'var(--amber)':'var(--text-muted)',
         `RV label matched a warning pattern on this tech\'s fix. Also counted in denominator.`)}
     </div>
-    ${_formulaBox(`Total Raw Points = ${qcPts.toFixed(4)} (QC) + ${i3qaPts.toFixed(4)} (i3QA) + ${fixPtsTotal.toFixed(4)} (Fix) + ${rvPtsTotal.toFixed(4)} (RV) = ${tech.points.toFixed(4)}`)}`);
+    ${_formulaBox(`Sub-total (before deductions) = ${qcPts.toFixed(4)} + ${i3qaPts.toFixed(4)} + ${fixPtsTotal.toFixed(4)} + ${rvPtsTotal.toFixed(4)} = ${(tech.pointsRaw||tech.points).toFixed(4)}`)}
+    ${(tech.drDeduct||0)+(tech.drqDeduct||0) < 0 ? `
+    <div style="margin-top:10px;background:rgba(220,38,38,0.07);border:1px solid var(--red);border-radius:8px;padding:12px 14px;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">⚠ Penalty Deductions Applied</div>
+      ${(tech.drDeduct||0)<0?`<div style="display:flex;justify-content:space-between;font-size:0.76rem;padding:3px 0;border-bottom:1px solid rgba(220,38,38,0.15);">
+        <span style="color:var(--text-muted);">i3 DR Penalty (QC tech) — ${tech.drRule?.level||''} — ${tech.egregiousMissedCount} egregious missed rows ≥ ${tech.drRule?.min} threshold</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${tech.drDeduct} pts</span>
+      </div>`:''}
+      ${(tech.drqDeduct||0)<0?`<div style="display:flex;justify-content:space-between;font-size:0.76rem;padding:3px 0;border-bottom:1px solid rgba(220,38,38,0.15);">
+        <span style="color:var(--text-muted);">i3QA DRQ Penalty (i3QA tech) — ${tech.drqRule?.level||''} — ${tech.egregiousDrqCount} egregious DRQ rows ≥ ${tech.drqRule?.min} threshold</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${tech.drqDeduct} pts</span>
+      </div>`:''}
+      <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:5px 0;margin-top:2px;">
+        <span style="font-weight:700;">Total deduction:</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${((tech.drDeduct||0)+(tech.drqDeduct||0))} pts</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:5px 0;border-top:2px solid rgba(220,38,38,0.3);margin-top:2px;">
+        <span style="font-weight:700;">Net Total Points (after deductions):</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);font-size:0.9rem;">${tech.points.toFixed(4)}</span>
+      </div>
+    </div>` : _formulaBox(`Net Total Points = ${tech.points.toFixed(4)} (no deductions applied ✓)`)}`);
 
   // ── SECTION 2: Fix breakdown by category ─────────────────
   const fixCatRows = Object.keys(catMap).sort((a,b)=>+a-+b).map((c,i)=>{
