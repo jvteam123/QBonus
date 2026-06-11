@@ -2220,25 +2220,33 @@ async function handleFile(file){
 }
 
 function parseDBF(buffer){
+  if (!buffer || buffer.byteLength < 32) return [];
   const view=new DataView(buffer);
   const numRecords=view.getUint32(4,true);
   const headerBytes=view.getUint16(8,true);
   const recordBytes=view.getUint16(10,true);
+  if (headerBytes > buffer.byteLength) return [];
   const fields=[];let offset=32;
-  while(view.getUint8(offset)!==0x0D&&offset<headerBytes){
+  while(offset+32<=headerBytes&&offset<buffer.byteLength&&view.getUint8(offset)!==0x0D){
     const nameBytes=new Uint8Array(buffer,offset,11);let name='';
     for(let i=0;i<11;i++){if(nameBytes[i]===0)break;name+=String.fromCharCode(nameBytes[i]);}
     const length=view.getUint8(offset+16);
-    fields.push({name,length});offset+=32;
+    if(length>0) fields.push({name,length});
+    offset+=32;
   }
   // Normalise all field names to uppercase so lookups always work (e.g. i3QA_ID → I3QA_ID)
   fields.forEach(f=>{ f.name = f.name.toUpperCase(); });
   const dec=new TextDecoder('latin1');const records=[];let recOff=headerBytes;
   for(let r=0;r<numRecords;r++){
+    if(recOff>=buffer.byteLength) break;
     const del=view.getUint8(recOff++);
     if(del===0x2A){recOff+=recordBytes-1;continue;}
     const rec={};
-    for(const f of fields){rec[f.name]=dec.decode(new Uint8Array(buffer,recOff,f.length)).trim();recOff+=f.length;}
+    for(const f of fields){
+      if(recOff+f.length>buffer.byteLength) break;
+      rec[f.name]=dec.decode(new Uint8Array(buffer,recOff,f.length)).trim();
+      recOff+=f.length;
+    }
     records.push(rec);
   }
   return records;
