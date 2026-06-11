@@ -1474,7 +1474,63 @@ const PDF_DEFAULTS = {
 };
 
 // Live settings (copies of defaults, user-editable)
-let S = JSON.parse(JSON.stringify(PDF_DEFAULTS));
+// Safe clone: deep-copies plain data from PDF_DEFAULTS and re-attaches
+// the computed getter aliases that JSON.parse/stringify would silently drop.
+function cloneDefaults() {
+  const base = JSON.parse(JSON.stringify({
+    bonusTiers:       PDF_DEFAULTS.bonusTiers,
+    calcSettings:     PDF_DEFAULTS.calcSettings,
+    sqmMultipliers:   PDF_DEFAULTS.sqmMultipliers,
+    densityModifiers: PDF_DEFAULTS.densityModifiers,
+    bonusFloor:       PDF_DEFAULTS.bonusFloor,
+    bonusThresholds:  PDF_DEFAULTS.bonusThresholds,
+    detect: {
+      taskColumns: PDF_DEFAULTS.detect.taskColumns,
+      triggers:    PDF_DEFAULTS.detect.triggers,
+    },
+  }));
+  // Re-attach getter aliases that JSON strips out
+  Object.defineProperties(base.detect, {
+    refixLabels: { get(){ return this.triggers.refix.labels; },    configurable:true },
+    refixCols:   { get(){ return this.triggers.refix.columns.map(c=>c.toUpperCase()); }, configurable:true },
+    missLabels:  { get(){ return this.triggers.miss.labels; },     configurable:true },
+    warnLabels:  { get(){ return this.triggers.warning.labels; },  configurable:true },
+    warnCols:    { get(){ return this.triggers.warning.columns.map(c=>c.toUpperCase()); }, configurable:true },
+    qcPenLabels: { get(){ return this.triggers.qcPenalty.labels; },configurable:true },
+    qcPenCols:   { get(){ return this.triggers.qcPenalty.columns.map(c=>c.toUpperCase()); }, configurable:true },
+  });
+  return base;
+}
+let S = cloneDefaults();
+
+// Restore user-saved settings from localStorage (survives page refresh)
+(function restorePersistedSettings() {
+  try {
+    const raw = localStorage.getItem('fp-settings-v2');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.bonusTiers)      S.bonusTiers      = saved.bonusTiers;
+    if (saved.calcSettings)    S.calcSettings    = saved.calcSettings;
+    if (saved.bonusFloor != null) S.bonusFloor   = saved.bonusFloor;
+    if (saved.bonusThresholds) S.bonusThresholds = saved.bonusThresholds;
+    if (saved.sqmMultipliers)  S.sqmMultipliers  = saved.sqmMultipliers;
+    if (saved.densityModifiers)S.densityModifiers= saved.densityModifiers;
+    if (saved.detect) {
+      if (saved.detect.taskColumns) S.detect.taskColumns = saved.detect.taskColumns;
+      if (saved.detect.triggers)    S.detect.triggers    = saved.detect.triggers;
+      // Re-attach getters after restoring triggers (they read from this.triggers live)
+      Object.defineProperties(S.detect, {
+        refixLabels: { get(){ return this.triggers.refix.labels; },    configurable:true },
+        refixCols:   { get(){ return this.triggers.refix.columns.map(c=>c.toUpperCase()); }, configurable:true },
+        missLabels:  { get(){ return this.triggers.miss.labels; },     configurable:true },
+        warnLabels:  { get(){ return this.triggers.warning.labels; },  configurable:true },
+        warnCols:    { get(){ return this.triggers.warning.columns.map(c=>c.toUpperCase()); }, configurable:true },
+        qcPenLabels: { get(){ return this.triggers.qcPenalty.labels; },configurable:true },
+        qcPenCols:   { get(){ return this.triggers.qcPenalty.columns.map(c=>c.toUpperCase()); }, configurable:true },
+      });
+    }
+  } catch(e) { console.warn('Settings restore failed:', e); }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 // TECH ROSTER
@@ -2597,11 +2653,22 @@ function saveSettings(){
   } else {
     toast('✓ Settings saved');
   }
+  // Persist settings to localStorage so they survive page refresh
+  try {
+    const toSave = {
+      bonusTiers: S.bonusTiers, calcSettings: S.calcSettings,
+      bonusFloor: S.bonusFloor, bonusThresholds: S.bonusThresholds,
+      sqmMultipliers: S.sqmMultipliers, densityModifiers: S.densityModifiers,
+      detect: { taskColumns: S.detect.taskColumns, triggers: S.detect.triggers },
+    };
+    localStorage.setItem('fp-settings-v2', JSON.stringify(toSave));
+  } catch(e) { console.warn('Settings persist failed:', e); }
 }
 
 function resetSettings(){
   if(!confirm('Reset all modifier tables to PDF defaults?'))return;
-  S=JSON.parse(JSON.stringify(PDF_DEFAULTS));
+  S=cloneDefaults();
+  try { localStorage.removeItem('fp-settings-v2'); } catch(e) {}
   renderSettingsTables();
   toast('↺ Reset to PDF defaults');
 }
