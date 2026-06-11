@@ -773,7 +773,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
 
             <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Refix Labels</div>
             <div class="tgl-row" style="margin-bottom:10px;flex-wrap:wrap;gap:6px;">
-              <input type="text" id="det-refix-labels" class="mod-input" style="width:180px;" placeholder="e.g. i" />
+              <input type="text" id="det-refix-labels" class="mod-input" style="width:180px;" placeholder="e.g. i, s" />
               <span style="font-size:0.72rem;color:var(--text-muted);align-self:center;">Columns:</span>
               <input type="text" id="det-refix-cols" class="mod-input" style="width:220px;" placeholder="rv1_label, rv2_label, rv3_label" />
             </div>
@@ -1167,7 +1167,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <code style="font-size:0.82rem;line-height:2;">Quality % = Fix ÷ (Fix + Refix + Warnings) × 100</code>
             <div style="margin-top:10px;color:var(--text-muted);line-height:1.6;">
               <b>Fix</b> = tasks where tech is FIX1_ID … FIX5_ID<br>
-              <b>Refix</b> = tasks with refix label (e.g. <i>i</i>) in RV columns<br>
+              <b>Refix</b> = tasks with refix label (e.g. <i>i, s</i>) in RV columns<br>
               <b>Warnings</b> = tasks with warn labels in warn columns
             </div>
           </div>
@@ -1224,7 +1224,17 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div style="margin-bottom:20px;">
         <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:4px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
           <span style="background:var(--red);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">7</span>
-          i3 Penalty Structure <span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);margin-left:4px;">(feedback by i3qa only)</span>
+          i3 Penalty Structure <span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);margin-left:4px;">(feedback by i3QA Tech — deducted from QC Tech)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div style="background:var(--red-bg);border-left:4px solid var(--red);border-radius:6px;padding:10px 14px;font-size:0.76rem;">
+            <div style="font-weight:700;color:var(--red);margin-bottom:5px;">Who gets deducted?</div>
+            <div style="color:var(--text);line-height:1.7;">The <b>QC Tech (QC_ID)</b> on each missed row receives the DR-level point deduction from their total fixpoints.<br>The i3QA Tech is <b>not</b> deducted by this penalty — they caused the feedback.</div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:0.76rem;">
+            <div style="font-weight:700;color:var(--text);margin-bottom:5px;">What triggers it?</div>
+            <div style="color:var(--text-muted);line-height:1.7;"><b>Egregious rows</b> = I3QA_CAT (or CATEGORY) is <b>1, 2, or 3</b><br>Count is summed <b>per QC Tech, per project cut-off</b><br>Highest matching DR level applies (not cumulative)</div>
+          </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">
           <b>Egregious Categories: Cat 1, 2, 3</b> &nbsp;·&nbsp; Deductions per Egregious Count (project per cut-off)
@@ -1253,10 +1263,20 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div style="margin-bottom:8px;">
         <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:4px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
           <span style="background:var(--amber);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">8</span>
-          i3QA Penalty Structure <span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);margin-left:4px;">(feedback by RV's and US)</span>
+          i3QA Penalty Structure <span style="font-weight:400;font-size:0.75rem;color:var(--text-muted);margin-left:4px;">(feedback by RV's and US — deducted from i3QA Tech)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div style="background:var(--amber-bg);border-left:4px solid var(--amber);border-radius:6px;padding:10px 14px;font-size:0.76rem;">
+            <div style="font-weight:700;color:var(--amber);margin-bottom:5px;">Who gets deducted?</div>
+            <div style="color:var(--text);line-height:1.7;">The <b>i3QA Tech (I3QA_ID)</b> on each missed egregious row receives the DRQ-level deduction.<br>Only rows where <b>FIXED1? = "N"</b> (not yet fixed) are counted toward the DRQ threshold.</div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:0.76rem;">
+            <div style="font-weight:700;color:var(--text);margin-bottom:5px;">FIXED1? = N condition</div>
+            <div style="color:var(--text-muted);line-height:1.7;">If the QC Tech has already fixed the row (<b>FIXED1? ≠ N</b>), it is <b>excluded</b> from the DRQ egregious count.<br>Only <b>unfixed</b> egregious rows count toward DRQ — fixed rows are exempt.</div>
+          </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">
-          <b>Egregious Categories: Cat 1, 2, 3</b> &nbsp;·&nbsp; Deductions per Egregious Count (project per cut-off)
+          <b>Egregious Categories: Cat 1, 2, 3</b> &nbsp;·&nbsp; DRQ count = egregious rows where <b style="color:var(--amber);">FIXED1? = "N"</b> only &nbsp;·&nbsp; per project cut-off
         </div>
         <div style="overflow-x:auto;">
           <table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
@@ -1276,6 +1296,72 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           </table>
         </div>
         <div style="margin-top:8px;font-size:0.73rem;color:var(--text-muted);padding-left:4px;">• <b>Class B-1:</b> These are moderate offenses with a 4-offense progression leading to termination</div>
+      </div>
+
+
+      <!-- ⑨ End-to-End Final Points Breakdown -->
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--purple);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">9</span>
+          End-to-End Final Points Formula — how every number is computed
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+
+          <!-- QC Tech final points -->
+          <div style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:0.76rem;border:1px solid var(--border);">
+            <div style="font-weight:700;color:var(--accent);margin-bottom:8px;">QC Tech Final Points</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:2;color:var(--text);">
+              <div>+ (Initial rows tagged × 0.125)</div>
+              <div style="color:var(--red);">− (QC miss rows × 0.125)</div>
+              <div style="border-top:1px dashed var(--border);margin-top:4px;padding-top:4px;">= <b>Base fixpoints</b></div>
+              <div style="color:var(--red);">− i3 DR Penalty (if egregious ≥ threshold)</div>
+              <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px;font-weight:700;">= <b>Final Points</b></div>
+            </div>
+            <div style="margin-top:8px;font-size:0.7rem;color:var(--text-muted);line-height:1.6;">
+              <b>i3 DR Penalty</b> uses ALL egregious rows (Cat 1,2,3) — no FIXED1 filter.<br>
+              <b>QC miss deduction</b> (0.125/row) is separate from the DR-level penalty.
+            </div>
+          </div>
+
+          <!-- i3QA Tech final points -->
+          <div style="background:var(--amber-bg);border-radius:10px;padding:14px 16px;font-size:0.76rem;border:1px solid var(--amber-border);">
+            <div style="font-weight:700;color:var(--amber);margin-bottom:8px;">i3QA Tech Final Points</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:2;color:var(--text);">
+              <div>+ (i3QA task rows × 1/12)</div>
+              <div style="color:var(--green);">+ (QC miss rows × 0.125)  ← QC Transfer</div>
+              <div style="border-top:1px dashed var(--border);margin-top:4px;padding-top:4px;">= <b>Base fixpoints</b></div>
+              <div style="color:var(--red);">− i3QA DRQ Penalty (if FIXED1=N egregious ≥ threshold)</div>
+              <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px;font-weight:700;">= <b>Final Points</b></div>
+            </div>
+            <div style="margin-top:8px;font-size:0.7rem;color:var(--text-muted);line-height:1.6;">
+              <b>DRQ Penalty</b> only counts egregious rows where <b>FIXED1? = "N"</b>.<br>
+              Fixed rows (FIXED1? ≠ N) are excluded from the DRQ threshold count.
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Full formula flow diagram -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:0.75rem;">
+          <div style="font-weight:700;color:var(--text);margin-bottom:10px;">Complete Calculation Flow</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;font-size:0.72rem;text-align:center;">
+            <div style="background:var(--accent);color:#fff;padding:8px 6px;border-radius:6px 0 0 6px;font-weight:700;">① Initial Tagging<br><span style="font-weight:400;font-size:0.67rem;">QC_ID rows × 0.125</span></div>
+            <div style="background:var(--red);color:#fff;padding:8px 6px;font-weight:700;">② QC Miss Penalty<br><span style="font-weight:400;font-size:0.67rem;">−0.125 per miss row<br>from QC Tech</span></div>
+            <div style="background:var(--green);color:#fff;padding:8px 6px;font-weight:700;">③ QC Transfer<br><span style="font-weight:400;font-size:0.67rem;">+0.125 per miss row<br>to i3QA Tech</span></div>
+            <div style="background:#7c3aed;color:#fff;padding:8px 6px;font-weight:700;">④ DR / DRQ Level<br><span style="font-weight:400;font-size:0.67rem;">DR = all egregious<br>DRQ = FIXED1=N only</span></div>
+            <div style="background:var(--navy);color:#fff;padding:8px 6px;border-radius:0 6px 6px 0;font-weight:700;">⑤ Final Points<br><span style="font-weight:400;font-size:0.67rem;">Base + Penalties<br>= Payout basis</span></div>
+          </div>
+          <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.71rem;color:var(--text-muted);">
+            <div style="line-height:1.7;"><b style="color:var(--text);">DR (i3 Penalty)</b> — attributed to QC Tech<br>
+              Threshold: 30→DR1(−30), 50→DR2(−50), 70→DR3(−100), 100→DR4(−200), 200→DR5(−500)<br>
+              Basis: <b>all</b> egregious (Cat 1,2,3) rows regardless of FIXED1
+            </div>
+            <div style="line-height:1.7;"><b style="color:var(--text);">DRQ (i3QA Penalty)</b> — attributed to i3QA Tech<br>
+              Threshold: 10→DRQ1(−30), 20→DRQ2(−50), 50→DRQ3(−100), 100→DRQ4(−200), 200→DRQ5(−500)<br>
+              Basis: only egregious rows where <b style="color:var(--amber);">FIXED1? = "N"</b>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1371,7 +1457,7 @@ const PDF_DEFAULTS = {
   detect: {
     taskColumns: { qc:['qc_id'], i3qa:['i3qa_id'], rv1:['rv1_id'], rv2:['rv2_id'] },
     triggers: {
-      refix:     { labels:['i'],                       columns:['rv1_label','rv2_label','rv3_label'] },
+      refix:     { labels:['i','s'],                   columns:['rv1_label','rv2_label','rv3_label'] },
       miss:      { labels:['m','c'],                   columns:['i3qa_label','rv1_label','rv2_label','rv3_label'] },
       warning:   { labels:['b','c','d','e','f','g','i'],columns:['r1_warn','r2_warn','r3_warn','r4_warn'] },
       qcPenalty: { labels:['m','e'],                   columns:['i3qa_label'] },
@@ -3194,10 +3280,14 @@ function openDrillDown(techId, stat) {
       [`Active rule`, isIR ? `IR mode → RV1 = ${cs.points.rv1_combo}` : `Non-IR mode → RV1 = ${cs.points.rv1}`],
     ],
     missed: [
-      [`Definition`, `I3QA_LABEL matches miss labels: ${S.detect.triggers.miss.labels.join(', ')}`],
-      [`Attribution`, `Attributed to the QC_ID tech (not the fix tech)`],
-      [`Effect`, `Counted in denominator of Quality % = hurts bonus`],
-      [`Total here`, `${rows.length} missed row${rows.length!==1?'s':''} attributed to this tech`],
+      [`Definition`, `I3QA_LABEL matches: ${S.detect.triggers.miss.labels.join(', ')} (cols: ${S.detect.triggers.miss.columns.join(', ')})`],
+      [`Attribution`, `Attributed to QC_ID tech — not the fix tech`],
+      [`Quality % effect`, `Each miss adds to denominator → lowers Fix Quality % → hurts payout multiplier`],
+      [`QC Penalty`, `Each miss row deducts −${cs.points.qc} pts from QC Tech fixpoints total`],
+      [`QC Transfer`, `Those −${cs.points.qc} pts are given to i3QA Tech (I3QA_ID) as a bonus`],
+      [`i3 DR Penalty`, `If egregious (Cat 1,2,3) count hits threshold → additional DR-level deduction from QC Tech`],
+      [`i3QA DRQ Penalty`, `DRQ counts only egregious rows where FIXED1? = "N" — fixed rows are excluded`],
+      [`Total here`, `${rows.length} missed row${rows.length!==1?'s':''} — see footer for full penalty breakdown`],
     ],
     refix: [
       [`Definition`, `RV label matches refix labels: ${S.detect.triggers.refix.labels.join(', ')}`],
@@ -3569,20 +3659,28 @@ function openAboutModal() {
 
   // ① Point sources table
   const sources = [
-    ['QC Tech (QC_ID)', 'Present on row', cs.points.qc, `${cs.points.qc} pts flat per tagged row`],
-    ['i3QA Tech (I3QA_ID)', 'Present on row', cs.points.i3qa.toFixed(6), `~1/12 pts per row (~${cs.points.i3qa.toFixed(4)})`],
+    ['QC Tech (QC_ID)', 'Present on row — Initial Tagging', cs.points.qc, `${cs.points.qc} pts flat per tagged row`],
+    ['QC Tech (QC_ID)', `Penalty: I3QA_LABEL = ${det.triggers.qcPenalty.labels.join('/')} in ${det.triggers.qcPenalty.columns.join(', ')}`, `−${cs.points.qc}`, `−${cs.points.qc} pts per miss row → deducted from QC Tech`],
+    ['i3QA Tech (I3QA_ID)', 'QC Transfer: receives deducted pts from QC penalty rows', `+${cs.points.qc}`, `+${cs.points.qc} pts per QC miss row → transferred to i3QA Tech`],
+    ['i3QA Tech (I3QA_ID)', 'i3QA task — Present on row', cs.points.i3qa.toFixed(6), `~1/12 pts per row (~${cs.points.i3qa.toFixed(4)})`],
     ['Fix Tech (FIX1–5_ID)', `Cat × ${gsd}${isIR?' × '+cs.irModifierValue+' IR':''}`, '(varies)', `catValue[cat][${gsd}]${isIR?' × '+cs.irModifierValue:''} per round`],
     ['RV1 Tech (RV1_ID)', isIR?'IR mode active':'Non-IR mode', isIR?cs.points.rv1_combo:cs.points.rv1, `RV1 = ${isIR?cs.points.rv1_combo+' (IR)':cs.points.rv1+' (non-IR)'}`],
     ['RV2+ Tech (RV2–4_ID)', 'Each additional RV', cs.points.rv2, `${cs.points.rv2} pts each`],
   ];
-  document.getElementById('about-sources-body').innerHTML = sources.map(([role, cond, pts, formula], i) =>
-    `<tr style="background:${i%2===0?'var(--bg)':'var(--surface)'}">
-      <td style="padding:8px 12px;font-weight:600;">${role}</td>
-      <td style="padding:8px 12px;color:var(--text-muted)">${cond}</td>
-      <td style="padding:8px 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${pts}</td>
-      <td style="padding:8px 12px;color:var(--text-muted)">${formula}</td>
-    </tr>`
-  ).join('');
+  // Style penalty/transfer rows differently
+  const sourceRowColors = ['var(--bg)','var(--red-bg)','rgba(5,150,105,0.07)','var(--bg)','var(--surface)','var(--bg)','var(--surface)'];
+  const sourceRowTextColors = ['','var(--red)','var(--green)','','','',''];
+  document.getElementById('about-sources-body').innerHTML = sources.map(([role, cond, pts, formula], i) => {
+    const bg = sourceRowColors[i] || (i%2===0?'var(--bg)':'var(--surface)');
+    const tc = sourceRowTextColors[i] || '';
+    const ptsColor = tc || (String(pts).startsWith('-') ? 'var(--red)' : 'var(--accent)');
+    return `<tr style="background:${bg}">
+      <td style="padding:8px 12px;font-weight:600;color:${tc||'var(--text)'}">${role}</td>
+      <td style="padding:8px 12px;color:${tc||'var(--text-muted)'}">${cond}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:${ptsColor}">${pts}</td>
+      <td style="padding:8px 12px;color:${tc||'var(--text-muted)'}">${formula}</td>
+    </tr>`;
+  }).join('');
 
   // ② Category × GSD table — highlight active GSD column
   const GSDS = ['3in','4in','6in','9in'];
@@ -3638,9 +3736,12 @@ function openAboutModal() {
 
   // ⑥ Miss attribution text
   document.getElementById('about-miss-text').innerHTML =
-    `When I3QA_LABEL matches <code style="background:var(--red-bg);color:var(--red);padding:1px 5px;border-radius:3px;">${det.triggers.miss.labels.join(', ')}</code>, the miss is attributed to the <b>QC_ID tech</b> on that row — not the fix tech. `
-    + `This means the QC tech's missed count increases, hurting their Quality %. `
-    + `The fix tech is unaffected by misses.`;
+    `<b>Miss detection:</b> When I3QA_LABEL matches <code style="background:var(--red-bg);color:var(--red);padding:1px 5px;border-radius:3px;">${det.triggers.miss.labels.join(', ')}</code> `
+    + `(cols: ${det.triggers.miss.columns.join(', ')}), the miss is attributed to the <b>QC_ID tech</b> — not the fix tech.<br>`
+    + `<b>Effect on Quality %:</b> The QC tech's missed count increases, which hurts their Fix Quality % and therefore their payout multiplier.<br>`
+    + `<b>QC Penalty (point deduction):</b> Additionally, when I3QA_LABEL matches <code style="background:var(--red-bg);color:var(--red);padding:1px 5px;border-radius:3px;">${det.triggers.qcPenalty.labels.join(', ')}</code> `
+    + `(cols: ${det.triggers.qcPenalty.columns.join(', ')}), the QC Tech loses <b>${cs.points.qc} pts</b> from their fixpoints total per row.<br>`
+    + `<b>QC Transfer:</b> Those deducted points are <b>transferred to the i3QA Tech (I3QA_ID)</b> on the same row as a bonus — rewarding the reviewer who caught the miss.`;
 
   document.getElementById('about-modal').classList.add('show');
 }
