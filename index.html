@@ -699,7 +699,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
         <div class="settings-info">Fix Quality % = Fix Tasks ÷ (Fix + Refix + Warnings). This modifier controls % of bonus actually paid out per tech.</div>
         <div style="overflow-y:auto;max-height:420px;border:1px solid var(--border);border-radius:8px;">
           <table class="mod-table" style="width:100%">
-            <thead style="position:sticky;top:0;z-index:2;background:var(--surface2);"><tr><th>Quality % Lower</th><th>Quality % Upper</th><th>% of Bonus Earned</th></tr></thead>
+            <thead style="position:sticky;top:0;z-index:2;background:var(--surface2);"><tr><th>Quality % ≥</th><th>% of Bonus Earned</th><th>Edit Bonus %</th></tr></thead>
             <tbody id="quality-table-body"></tbody>
           </table>
         </div>
@@ -1944,7 +1944,8 @@ function buildTechStats(rawRecords) {
 
   return Object.values(techStats).map(t => {
     const denom = t.fixTasks + t.refixTasks + t.warnings.length;
-    const qp    = denom > 0 ? (t.fixTasks / denom) * 100 : 0;
+    // Default to 100% (perfect quality) when tech has no fix/refix/warn tasks
+    const qp    = denom > 0 ? (t.fixTasks / denom) * 100 : 100;
     const qualityMod = calculateQualityModifier(qp);
     const thresholdBonus = getThresholdBonus(qp);
 
@@ -2423,9 +2424,11 @@ function recalcBonus(){
       t.totalBonus = t.points * bonusMult * qualityFrac;
     }
   };
+  // Apply only to techRows (single source of truth).
+  // filteredTech holds references to the same objects, so they update automatically.
   techRows.forEach(applyToTech);
-  filteredTech.forEach(applyToTech);
-  renderTechTable();
+  // Rebuild filteredTech from updated techRows (preserves current search/team filter + sort)
+  applyTechFilter();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2761,6 +2764,9 @@ function saveSettings(){
       const gsdMap={v3:'3in',v4:'4in',v6:'6in',v9:'9in'};
       const cat=idx+1; const gKey=gsdMap[field]||field;
       if(S.calcSettings.categoryValues[cat]) S.calcSettings.categoryValues[cat][gKey]=val;
+    } else if(tbl==='bonus-tier'){
+      // Save edited bonus % back to the tier (stored as fraction, input shows as %)
+      if(S.bonusTiers[idx] && field==='bonus') S.bonusTiers[idx].bonus = val / 100;
     }
   });
   S.calcSettings.irModifierValue = Number(document.getElementById('ir-mod-input').value)||1.5;
@@ -4482,7 +4488,7 @@ function openTechDetail(techId) {
     const fw = active ? 'font-weight:700;' : 'color:var(--text-muted);';
     return `<tr style="${bg}${fw}">
       <td style="padding:5px 8px;">≥ ${tier.quality}%</td>
-      <td style="padding:5px 8px;font-family:'JetBrains Mono',monospace;color:${active?'var(--green)':''};">${tier.bonus}%</td>
+      <td style="padding:5px 8px;font-family:'JetBrains Mono',monospace;color:${active?'var(--green)':''};">${(tier.bonus*100).toFixed(0)}%</td>
       <td style="padding:5px 8px;">${active?`← <b>your QP ${qp.toFixed(2)}% lands here</b>`:''}</td>
     </tr>`;
   }).join('');
@@ -4699,16 +4705,38 @@ function openTechDetail(techId) {
         <div style="font-size:0.63rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Base Bonus (no mult)</div>
         <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;color:var(--accent);margin-top:2px;">${liveBaseBonus.toFixed(4)}</div>
       </div>
-      <div style="background:rgba(5,150,105,0.1);border-radius:8px;padding:8px;border:1px solid var(--green);">
-        <div style="font-size:0.63rem;color:var(--green);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Final Payout</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;color:var(--green);margin-top:2px;">${liveTotalBonus.toFixed(4)}</div>
+      <div style="background:rgba(5,150,105,0.1);border-radius:8px;padding:8px;border:2px solid var(--green);">
+        <div style="font-size:0.63rem;color:var(--green);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">✅ Final PHP Payout</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.1rem;color:var(--green);margin-top:2px;">₱ ${liveTotalBonus.toFixed(4)}</div>
+        <div style="font-size:0.6rem;color:var(--text-light);margin-top:1px;">Points × ${liveMult.toFixed(2)} × ${qualMod}%</div>
       </div>
     </div>`);
+
+  // Add a prominent final calculation banner below all sections
+  const secFinal = `<div style="margin-top:14px;padding:16px 20px;background:linear-gradient(135deg,rgba(5,150,105,0.12),rgba(14,165,233,0.08));border:2px solid var(--green);border-radius:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:4px;">📊 Final Calculation Summary</div>
+      <div style="font-size:0.76rem;color:var(--text-muted);line-height:1.6;font-family:'JetBrains Mono',monospace;">
+        ${tech.points.toFixed(4)} pts
+        &nbsp;×&nbsp;${liveMult.toFixed(2)} (mult)
+        &nbsp;×&nbsp;(${qualMod}% ÷ 100)
+        &nbsp;=&nbsp;<b style="color:var(--green);">₱ ${liveTotalBonus.toFixed(4)}</b>
+      </div>
+      <div style="font-size:0.66rem;color:var(--text-light);margin-top:3px;">
+        Multiplier from Payout Calculator panel · Quality% from Fix Quality tier table
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:2px;">Payout w/ Mult</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:2rem;color:var(--green);line-height:1;">₱ ${liveTotalBonus.toFixed(4)}</div>
+      <div style="font-size:0.64rem;color:var(--text-muted);margin-top:2px;">PHP</div>
+    </div>
+  </div>`;
 
   document.getElementById('td-title').textContent = `${tech.name || techId}  (${techId})`;
   document.getElementById('td-subtitle').textContent =
     `${tech.team||'—'}  ·  Team ${tech.teamNum||'—'}  ·  ${tech.month||''}  ·  GSD: ${gsd}  ·  ${isIR?'IR':'Non-IR'}`;
-  document.getElementById('td-body').innerHTML = sec0 + sec1 + sec2 + sec3 + sec4;
+  document.getElementById('td-body').innerHTML = sec0 + sec1 + sec2 + sec3 + sec4 + secFinal;
   document.getElementById('tech-detail-modal').classList.add('show');
 }
 
