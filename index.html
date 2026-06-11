@@ -4090,257 +4090,507 @@ async function confirmNewProject() {
 // ═══════════════════════════════════════════════════════════════
 // ROW DETAIL MODAL  — eye icon on Tasks table
 // ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
+//  SHARED DETAIL HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function _detailSection(icon, title, color, hint, content) {
+  return `
+  <div style="background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.06);">
+      <span style="font-size:1rem;">${icon}</span>
+      <span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${color};">${title}</span>
+      ${hint ? `<span style="font-size:0.68rem;color:var(--text-muted);margin-left:auto;font-style:italic;">${hint}</span>` : ''}
+    </div>
+    <div style="padding:12px 16px;">${content}</div>
+  </div>`;
+}
+
+function _kv(label, val, valColor, explain, mono) {
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:5px 0;border-bottom:1px solid var(--border-light);">
+    <div>
+      <span style="font-size:0.76rem;color:var(--text-muted);">${label}</span>
+      ${explain ? `<div style="font-size:0.66rem;color:var(--text-muted);margin-top:1px;line-height:1.4;">${explain}</div>` : ''}
+    </div>
+    <span style="${mono!==false?'font-family:\'JetBrains Mono\',monospace;':''}font-weight:700;color:${valColor||'var(--text)'};font-size:0.82rem;white-space:nowrap;">${val}</span>
+  </div>`;
+}
+
+function _formulaBox(expr) {
+  return `<div style="margin-top:10px;background:var(--blue-light);border-radius:7px;border-left:3px solid var(--accent);padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--accent);">${expr}</div>`;
+}
+
+function _badge(text, bg, fg) {
+  return `<span style="background:${bg};color:${fg||'#fff'};border-radius:4px;padding:1px 7px;font-size:0.68rem;font-weight:700;white-space:nowrap;">${text}</span>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ROW DETAIL MODAL  — 👁 on Tasks table
+// ─────────────────────────────────────────────────────────────────────────────
 function openRowDetail(uid) {
   const row = allRows.find(r => r.uid === uid);
   if (!row) { toast('Row not found'); return; }
-  const raw = row._raw || {};
-  const cs  = S.calcSettings;
+  const raw  = row._raw || {};
+  const cs   = S.calcSettings;
   const isIR = importSettings.blocktype === 'IR';
   const gsd  = importSettings.gsd || '6in';
   const irM  = isIR ? cs.irModifierValue : 1.0;
   const cat  = parseInt(row.category || 0);
   const catVal = getCatGsdValue(cat, gsd);
 
-  // ── compute per-task contributions ──────────────────────────
+  // ── per-task attribution lines ─────────────────────────────
   const lines = [];
-  let total = 0;
-
-  const tag = (label, techId, pts, note) => {
-    const techName = techId ? (TECH_ROSTER[techId]?.name || techId) : '—';
-    lines.push({ label, techId: techId || '—', techName, pts, note: note || '' });
-    total += pts;
+  let totalPts = 0;
+  const tag = (label, techId, pts, formulaHtml, type) => {
+    const info = techId ? (TECH_ROSTER[techId] || {}) : {};
+    lines.push({ label, techId: techId||'—', name: info.name||techId||'—', team: info.team||'', formulaHtml, pts, type });
+    totalPts += pts;
   };
 
-  // QC
-  if (row.qc_id) tag('Initial Tag (QC)', row.qc_id, cs.points.qc, `${cs.points.qc} pts flat`);
+  if (row.qc_id)   tag('Initial Tag', row.qc_id,   cs.points.qc,
+    `<b>${cs.points.qc}</b> pts flat rate (every tagged fixpoint earns this for the QC tech)`, 'qc');
 
-  // i3QA
-  if (row.i3qa_id) tag('i3QA Review', row.i3qa_id, cs.points.i3qa, `1/12 ≈ ${cs.points.i3qa.toFixed(6)} pts`);
+  if (row.i3qa_id) tag('i3QA Review', row.i3qa_id, cs.points.i3qa,
+    `<b>1 ÷ 12 = ${cs.points.i3qa.toFixed(6)}</b> pts (one-twelfth of a fix point per i3QA pass)`, 'i3qa');
 
-  // Fix rounds
   const fixCatCols = [null,'CATEGORY','RV1_CAT','RV2_CAT','RV3_CAT','CATEGORY'];
   for (let i = 1; i <= 5; i++) {
-    const fid = (raw[`FIX${i}_ID`] || '').trim().toUpperCase();
+    const fid = (raw[`FIX${i}_ID`]||'').trim().toUpperCase();
     if (!fid) continue;
-    const roundCat = parseInt(raw[fixCatCols[i]] || raw['CATEGORY'] || 0);
-    const rVal = getCatGsdValue(roundCat, gsd);
-    const pts  = rVal * irM;
-    const irNote = isIR ? ` × ${cs.irModifierValue} IR` : '';
-    tag(`Fix Round ${i}`, fid, pts, `Cat ${roundCat} [${gsd}] = ${rVal}${irNote} = ${pts.toFixed(4)}`);
+    const rCat  = parseInt(raw[fixCatCols[i]] || raw['CATEGORY'] || 0);
+    const rVal  = getCatGsdValue(rCat, gsd);
+    const pts   = rVal * irM;
+    const irPart = isIR ? ` × <b>${cs.irModifierValue}</b> IR modifier` : '';
+    tag(`Fix Round ${i}`, fid, pts,
+      `Cat <b>${rCat}</b> @ GSD <b>${gsd}</b> = <b>${rVal}</b>${irPart} = <b>${pts.toFixed(4)}</b> pts`, 'fix');
   }
 
-  // RV1
-  const rv1id = (raw['RV1_ID'] || '').trim().toUpperCase();
+  const rv1id = (raw['RV1_ID']||'').trim().toUpperCase();
   if (rv1id) {
     const pts = isIR ? cs.points.rv1_combo : cs.points.rv1;
-    tag('RV1 Review', rv1id, pts, isIR ? `RV1 IR/COMBO = ${pts}` : `RV1 Non-IR = ${pts}`);
+    tag('RV1 Review', rv1id, pts,
+      isIR ? `IR/COMBO block → flat <b>${pts}</b> pts for first reviewer`
+           : `Non-IR block → flat <b>${pts}</b> pts for first reviewer`, 'rv');
   }
-  // RV2–RV4
   for (let i = 2; i <= 4; i++) {
-    const rid = (raw[`RV${i}_ID`] || '').trim().toUpperCase();
-    if (rid) tag(`RV${i} Review`, rid, cs.points.rv2, `RV2+ = ${cs.points.rv2} pts`);
+    const rid = (raw[`RV${i}_ID`]||'').trim().toUpperCase();
+    if (rid) tag(`RV${i} Review`, rid, cs.points.rv2,
+      `RV round ≥ 2 → flat <b>${cs.points.rv2}</b> pts (secondary reviewer rate)`, 'rv');
   }
 
-  // QC penalty transfer
-  const i3qaLabel = (raw['I3QA_LABEL'] || '').trim().toUpperCase();
-  const missLabelsUC = S.detect.triggers.miss.labels.map(l => l.toUpperCase());
-  const penCols = S.detect.triggers.qcPenalty.columns;
-  const penLabels = S.detect.triggers.qcPenalty.labels;
-  const isPenalty = penCols.some(c => {
-    const v = (raw[c.toUpperCase()] || '').trim().toLowerCase();
+  // QC penalty / transfer
+  const i3qaLabel    = (raw['I3QA_LABEL']||'').trim().toUpperCase();
+  const missLabelsUC = S.detect.triggers.miss.labels.map(l=>l.toUpperCase());
+  const isMiss       = missLabelsUC.includes(i3qaLabel);
+  const penCols      = S.detect.triggers.qcPenalty?.columns || [];
+  const penLabels    = S.detect.triggers.qcPenalty?.labels  || [];
+  const isPenalty    = penCols.some(c => {
+    const v = (raw[c.toUpperCase()]||'').trim().toLowerCase();
     return v && penLabels.includes(v);
   });
   if (isPenalty && row.qc_id) {
-    tag('QC Penalty (deduct)', row.qc_id, -cs.points.qc, `−${cs.points.qc} pts from QC tech`);
-    if (row.i3qa_id) tag('QC→i3QA Transfer', row.i3qa_id, cs.points.qc, `+${cs.points.qc} pts to i3QA tech`);
+    tag('QC Penalty', row.qc_id, -cs.points.qc,
+      `QC tech initially tagged this wrong → <b>−${cs.points.qc}</b> pts deducted from QC`, 'penalty');
+    if (row.i3qa_id) tag('QC→i3QA Transfer', row.i3qa_id, cs.points.qc,
+      `Those points are transferred to the i3QA tech who caught the error → <b>+${cs.points.qc}</b>`, 'transfer');
   }
 
-  // ── render ──────────────────────────────────────────────────
-  const irBadge = row.ir === 'IR'
-    ? `<span style="background:var(--amber);color:#fff;border-radius:4px;padding:2px 8px;font-size:0.7rem;font-weight:700;">IR</span>`
-    : row.ir === 'COMBO'
-    ? `<span style="background:var(--purple);color:#fff;border-radius:4px;padding:2px 8px;font-size:0.7rem;font-weight:700;">COMBO</span>`
-    : `<span style="background:var(--border);color:var(--text-muted);border-radius:4px;padding:2px 8px;font-size:0.7rem;">Non-IR</span>`;
+  // ── miss / egregious flags ────────────────────────────────
+  const fixed1val = (raw['FIXED1?']||raw['FIXED1']||'').toString().trim().toUpperCase();
+  const afp1val   = (raw['AFP1_STAT']||'').toString().trim().toUpperCase();
+  const isEgregious = [1,2,3].includes(cat);
+  const isDrq     = isEgregious && (fixed1val==='N' || afp1val==='AA');
 
-  const metaGrid = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:0.78rem;">
-      <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
-        <div style="color:var(--text-muted);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Record Info</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <div><span style="color:var(--text-muted)">Category:</span> <b style="color:var(--accent)">${row.category || '—'}</b></div>
-          <div><span style="color:var(--text-muted)">Type:</span> ${irBadge}</div>
-          <div><span style="color:var(--text-muted)">GSD:</span> <b>${gsd}</b></div>
-          <div><span style="color:var(--text-muted)">Site:</span> <b>${importSettings.site || '—'}</b></div>
-          <div><span style="color:var(--text-muted)">Fix Date:</span> <b>${row.fix1_date || '—'}</b></div>
-          <div><span style="color:var(--text-muted)">Fixed1?:</span> <b style="color:${(raw['FIXED1?']||'').toUpperCase()==='N'?'var(--red)':'var(--green)'}">${raw['FIXED1?'] || '—'}</b></div>
-          <div><span style="color:var(--text-muted)">i3QA Label:</span> <b style="color:${missLabelsUC.includes(i3qaLabel)?'var(--red)':'var(--text)'}">${row.i3qa_label || '—'}</b></div>
-          <div><span style="color:var(--text-muted)">RV1 Label:</span> <b>${row.rv1_label || '—'}</b></div>
-          <div><span style="color:var(--text-muted)">Refixes:</span> <b style="color:${row.zfix_count>0?'var(--red)':'var(--text)'}">${row.zfix_count}</b></div>
-        </div>
-      </div>
-      <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
-        <div style="color:var(--text-muted);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Cat ${cat} Point Value</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          ${[1,2,3,4,5,6,7,8,9].map(c=>{
-            const v = getCatGsdValue(c, gsd);
-            return `<div style="${c===cat?'font-weight:700;color:var(--accent);':'color:var(--text-muted);'}">
-              Cat ${c}: <span style="font-family:'JetBrains Mono',monospace">${v}</span>${c===cat?' ← this row':''}
-              ${c===cat&&isIR?`<span style="color:var(--amber)"> × ${cs.irModifierValue} = ${(v*irM).toFixed(4)}</span>`:''}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-    </div>`;
+  // ── render ─────────────────────────────────────────────────
+  const irBadge = row.ir==='IR'   ? _badge('IR','var(--amber)')
+                : row.ir==='COMBO'? _badge('COMBO','var(--purple)')
+                :                   _badge('Non-IR','var(--border)','var(--text-muted)');
 
-  const tableRows = lines.map((l, i) => {
-    const bg = i % 2 === 0 ? '' : 'background:var(--surface2);';
-    const ptsColor = l.pts < 0 ? 'color:var(--red)' : l.pts > 0 ? 'color:var(--accent)' : 'color:var(--text-muted)';
+  const totalColor = totalPts>0?'var(--green)':totalPts<0?'var(--red)':'var(--text-muted)';
+  const typeColors = { qc:'var(--accent)', i3qa:'#8b5cf6', fix:'var(--green)', rv:'var(--amber)', penalty:'var(--red)', transfer:'var(--purple)' };
+
+  // Attribution table
+  const attrRows = lines.map((l,i)=>{
+    const bg = i%2===0?'':'background:rgba(0,0,0,0.03);';
+    const pc = l.pts<0?'var(--red)':l.pts>0?'var(--green)':'var(--text-muted)';
+    const tc = typeColors[l.type]||'var(--text-muted)';
     return `<tr style="${bg}">
-      <td style="padding:8px 10px;font-size:0.76rem;color:var(--text-muted);font-weight:600;white-space:nowrap;">${l.label}</td>
-      <td style="padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--green);font-weight:700;">${l.techId}</td>
-      <td style="padding:8px 10px;font-size:0.76rem;">${l.techName}</td>
-      <td style="padding:8px 10px;font-size:0.72rem;color:var(--text-muted);">${l.note}</td>
-      <td style="padding:8px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.82rem;${ptsColor}">${l.pts >= 0 ? '+' : ''}${l.pts.toFixed(4)}</td>
+      <td style="padding:8px 10px;white-space:nowrap;">
+        <span style="display:inline-block;background:${tc};opacity:0.9;color:#fff;border-radius:4px;padding:1px 7px;font-size:0.65rem;font-weight:700;">${l.label}</span>
+      </td>
+      <td style="padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;color:var(--accent);">${l.techId}</td>
+      <td style="padding:8px 10px;font-size:0.76rem;">${l.name}${l.team?` <span style="color:var(--text-muted);font-size:0.68rem;">(${l.team})</span>`:''}</td>
+      <td style="padding:8px 10px;font-size:0.71rem;color:var(--text-muted);line-height:1.5;">${l.formulaHtml}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.84rem;color:${pc};">${l.pts>=0?'+':''}${l.pts.toFixed(4)}</td>
     </tr>`;
   }).join('');
 
-  const totalColor = total > 0 ? 'var(--green)' : total < 0 ? 'var(--red)' : 'var(--text-muted)';
+  // Category value reference table
+  const catTable = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.73rem;">
+      <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+        <th style="padding:5px 8px;text-align:left;">Cat</th>
+        <th style="padding:5px 8px;text-align:right;">Value @ ${gsd}</th>
+        ${isIR?`<th style="padding:5px 8px;text-align:right;">After IR ×${cs.irModifierValue}</th>`:''}
+        <th style="padding:5px 8px;text-align:left;">Meaning</th>
+      </tr></thead>
+      <tbody>
+        ${[1,2,3,4,5,6,7,8,9].map(c=>{
+          const v = getCatGsdValue(c, gsd);
+          const active = c===cat;
+          const bg = active ? 'background:rgba(14,165,233,0.1);' : (c%2===0?'background:rgba(0,0,0,0.02);':'');
+          const fw = active ? 'font-weight:700;' : '';
+          return `<tr style="${bg}${fw}">
+            <td style="padding:5px 8px;">Cat ${c}${active?` <span style="background:var(--accent);color:#fff;border-radius:3px;padding:0 5px;font-size:0.63rem;">THIS ROW</span>`:''}</td>
+            <td style="padding:5px 8px;text-align:right;font-family:'JetBrains Mono',monospace;color:${active?'var(--accent)':''};">${v}</td>
+            ${isIR?`<td style="padding:5px 8px;text-align:right;font-family:'JetBrains Mono',monospace;color:${active?'var(--amber)':'var(--text-muted)'};">${(v*irM).toFixed(4)}</td>`:''}
+            <td style="padding:5px 8px;font-size:0.69rem;color:var(--text-muted);">${['','Egregious A','Egregious B','Egregious C','Minor A','Minor B','Minor C','Advisory A','Advisory B','Advisory C'][c]||''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 
-  document.getElementById('rd-uid').textContent = `UID: ${uid}`;
-  document.getElementById('rd-body').innerHTML = `
-    ${metaGrid}
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Point Attribution — who earns what from this row</div>
+  // Flag pills
+  const flagsHtml = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+      ${isMiss    ? _badge(`⚠ Missed/Rework (${i3qaLabel})`,'var(--red)') : _badge('✓ Not Missed','var(--border)','var(--text-muted)')}
+      ${isEgregious ? _badge(`Cat ${cat} = Egregious`,'#7c3aed') : _badge(`Cat ${cat} = Non-Egregious`,'var(--border)','var(--text-muted)')}
+      ${fixed1val==='N' ? _badge('FIXED1? = N → counts for DRQ','var(--red)') : afp1val==='AA' ? _badge('AFP1_STAT = AA → counts for DRQ','var(--red)') : _badge('Not DRQ-eligible','var(--border)','var(--text-muted)')}
+      ${isPenalty ? _badge('QC Penalty applied','var(--red)') : ''}
+    </div>`;
+
+  // ── SECTION 0: Quick identity ─────────────────────────────
+  const sec0 = _detailSection('🪪','Record Identity','var(--text-muted)','raw field values from DBF', `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">
+      ${_kv('Category', `<b style="color:var(--accent)">Cat ${row.category||'—'}</b>`,   'var(--text)', 'Determines point value per fix')}
+      ${_kv('Block Type', irBadge,  'var(--text)', 'IR = higher RV1 rate, combo eligible')}
+      ${_kv('GSD Setting', `<b>${gsd}</b>`, 'var(--text)', 'Ground Sample Distance — used to look up cat value')}
+      ${_kv('Site', importSettings.site||'—', 'var(--text-muted)')}
+      ${_kv('Fix Date', row.fix1_date||'—', 'var(--text-muted)')}
+      ${_kv('FIXED1?', `<b style="color:${fixed1val==='N'?'var(--red)':'var(--green)'}">${fixed1val||'—'}</b>`, 'var(--text)',
+        fixed1val==='N'?'Not yet fixed → counts for DRQ':'Fixed or blank → excluded from DRQ')}
+      ${_kv('AFP1_STAT', `<b style="color:${afp1val==='AA'?'var(--red)':'var(--text)'}">${afp1val||'—'}</b>`, 'var(--text)',
+        afp1val==='AA'?'RQA-approved → counts for DRQ':'')}
+      ${_kv('i3QA Label', `<b style="color:${isMiss?'var(--red)':'var(--green)'}">${row.i3qa_label||'—'}</b>`, 'var(--text)',
+        isMiss?`Matches miss label (${missLabelsUC.join(',')}) → Missed flag`:'Does not match miss labels')}
+      ${_kv('RV1 Label', row.rv1_label||'—', 'var(--text-muted)')}
+      ${_kv('Refixes (Z-Fix)', row.zfix_count, row.zfix_count>0?'var(--red)':'var(--text-muted)',
+        row.zfix_count>0?'Each refix lowers that tech\'s Fix Quality %':'')}
+    </div>
+    <div style="margin-top:10px;border-top:1px solid var(--border-light);padding-top:8px;">
+      <div style="font-size:0.68rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;">Status Flags</div>
+      ${flagsHtml}
+    </div>`);
+
+  // ── SECTION 1: Category value reference ──────────────────
+  const sec1 = _detailSection('🗂️','Category Point Values','var(--accent)',
+    `Fix pts = Cat value × GSD × IR modifier`,
+    catTable + _formulaBox(`Cat ${cat} @ ${gsd} = ${catVal}${isIR?` × ${cs.irModifierValue} (IR) = ${(catVal*irM).toFixed(4)}`:''}`));
+
+  // ── SECTION 2: Point attribution table ───────────────────
+  const sec2 = _detailSection('💰','Point Attribution — Who Earns What From This Row','var(--green)',
+    'Each task type has its own tech and formula', `
+    <div style="font-size:0.71rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+      A single fixpoint row can generate points for multiple techs simultaneously — the QC tech who tagged it, the i3QA tech who reviewed it,
+      the fix tech(s) who fixed it across rounds, and the RV tech(s) who verified it. Each is shown below with the exact formula used.
+    </div>
     <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border);">
-      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+      <table style="width:100%;border-collapse:collapse;">
         <thead>
           <tr style="background:var(--header-bg);color:var(--header-text);">
-            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Task</th>
-            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Tech ID</th>
-            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Name</th>
-            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Formula</th>
-            <th style="padding:8px 10px;text-align:right;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Points</th>
+            <th style="padding:8px 10px;text-align:left;font-size:0.67rem;text-transform:uppercase;letter-spacing:0.05em;">Task Type</th>
+            <th style="padding:8px 10px;text-align:left;font-size:0.67rem;text-transform:uppercase;letter-spacing:0.05em;">Tech ID</th>
+            <th style="padding:8px 10px;text-align:left;font-size:0.67rem;text-transform:uppercase;letter-spacing:0.05em;">Tech Name</th>
+            <th style="padding:8px 10px;text-align:left;font-size:0.67rem;text-transform:uppercase;letter-spacing:0.05em;">Formula / Reason</th>
+            <th style="padding:8px 10px;text-align:right;font-size:0.67rem;text-transform:uppercase;letter-spacing:0.05em;">Points</th>
           </tr>
         </thead>
-        <tbody>${tableRows}</tbody>
+        <tbody>${attrRows}</tbody>
         <tfoot>
           <tr style="background:var(--surface2);border-top:2px solid var(--border);">
-            <td colspan="4" style="padding:9px 10px;font-weight:700;font-size:0.78rem;">Total points distributed from this row</td>
-            <td style="padding:9px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;color:${totalColor}">${total.toFixed(4)}</td>
+            <td colspan="4" style="padding:9px 12px;font-weight:700;font-size:0.78rem;">Total points distributed from this one row</td>
+            <td style="padding:9px 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.92rem;color:${totalColor};">${totalPts.toFixed(4)}</td>
           </tr>
         </tfoot>
       </table>
     </div>
-    <div style="margin-top:10px;font-size:0.71rem;color:var(--text-muted);padding:8px 12px;background:var(--blue-light);border-radius:6px;border-left:3px solid var(--accent);">
-      ℹ Points shown are distributed to individual techs — QC, i3QA, Fix, and RV techs each earn their own share from this single row.
-    </div>`;
+    <div style="margin-top:8px;font-size:0.69rem;color:var(--text-muted);line-height:1.5;">
+      ℹ <b>Why the total can exceed the cat value:</b> QC flat pts + i3QA flat pts + Fix pts (cat×gsd) + RV flat pts are all <i>additive</i> —
+      they each go to different techs, so the same row contributes to multiple people's totals.
+    </div>`);
+
+  document.getElementById('rd-uid').textContent = `UID: ${uid}`;
+  document.getElementById('rd-body').innerHTML = sec0 + sec1 + sec2;
   document.getElementById('row-detail-modal').classList.add('show');
 }
 
-// ═══════════════════════════════════════════════════════════════
-// TECH DETAIL MODAL  — eye icon on Tech Summary table
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
+//  TECH DETAIL MODAL  — 👁 on Tech Summary table
+// ─────────────────────────────────────────────────────────────────────────────
 function openTechDetail(techId) {
   const tech = techRows.find(t => t.id === techId);
   if (!tech) { toast('Tech not found'); return; }
 
-  const cs  = S.calcSettings;
+  const cs   = S.calcSettings;
   const isIR = importSettings.blocktype === 'IR';
   const gsd  = importSettings.gsd || '6in';
   const mult = tech.bonusMultiplier || currentBonusMultiplier;
-  const qp   = tech.qp || 0;
-  const qualMod = tech.qualityPctMod || 0;
+  const qp   = tech.qp    || 0;
+  const qualMod    = tech.qualityPctMod || 0;
   const threshApplied = tech.thresholdApplied || false;
-  const baseBonus = tech.baseBonus || 0;
+  const baseBonus  = tech.baseBonus  || 0;
   const totalBonus = tech.totalBonus || 0;
-  const qpColor = qp >= 95 ? 'var(--green)' : qp >= 85 ? 'var(--amber)' : 'var(--red)';
+  const qpColor = qp>=95?'var(--green)':qp>=85?'var(--amber)':'var(--red)';
 
-  // ── Points breakdown by task type ────────────────────────────
-  const qcPts    = tech.initial * cs.points.qc;
-  const i3qaPts  = tech.i3qa * cs.points.i3qa;
-  const rvPts    = tech.rv > 0
-    ? (tech._src?.rv?.length
-        ? tech._src.rv.reduce((s, r) => {
-            const rid = (r._raw?.RV1_ID || '').trim().toUpperCase();
-            return s + (rid === techId
-              ? (isIR ? cs.points.rv1_combo : cs.points.rv1)
-              : cs.points.rv2);
-          }, 0)
-        : tech.rv * (isIR ? cs.points.rv1_combo : cs.points.rv1))
-    : 0;
+  // ── Derived numbers ────────────────────────────────────────
+  const qcPts   = tech.initial * cs.points.qc;
+  const i3qaPts = tech.i3qa * cs.points.i3qa;
+  const denom   = tech.fix + tech.refix + tech.warn;
 
-  // ── Quality tier lookup explanation ──────────────────────────
-  const nearTiers = S.bonusTiers.filter(t => Math.abs(t.quality - qp) < 5).slice(0, 5);
-  const activeTier = S.bonusTiers.find(t => qp >= t.quality);
+  // Fix points broken down by category using _src records
+  const fixSrc  = (tech._src?.fix || []);
+  const catMap  = {};   // cat → { count, totalPts }
+  const fixCatCols = [null,'CATEGORY','RV1_CAT','RV2_CAT','RV3_CAT','CATEGORY'];
+  fixSrc.forEach(r => {
+    // find which fix round this record corresponds to for this tech
+    let rCat = parseInt(r.category || r.CATEGORY || 0);
+    for (let i=1;i<=5;i++){
+      const fid=(r._raw?.[`FIX${i}_ID`]||'').trim().toUpperCase();
+      if(fid===techId){ rCat=parseInt(r._raw?.[fixCatCols[i]]||r._raw?.['CATEGORY']||r.category||0); break; }
+    }
+    const rVal = getCatGsdValue(rCat, gsd);
+    const pts  = rVal * (isIR ? cs.irModifierValue : 1);
+    if (!catMap[rCat]) catMap[rCat] = { count:0, totalPts:0, unitVal:rVal };
+    catMap[rCat].count++;
+    catMap[rCat].totalPts += pts;
+  });
+  const fixPtsTotal = Object.values(catMap).reduce((s,v)=>s+v.totalPts,0);
 
-  // ── Sections ─────────────────────────────────────────────────
-  const pct = (n, total) => total > 0 ? ` (${(n/total*100).toFixed(1)}%)` : '';
+  // RV points broken down RV1 vs RV2+
+  const rvSrc = (tech._src?.rv || []);
+  let rv1count=0, rv2count=0, rv1pts=0, rv2pts=0;
+  rvSrc.forEach(r => {
+    const rid = (r._raw?.RV1_ID||'').trim().toUpperCase();
+    if (rid===techId) { rv1count++; rv1pts += isIR?cs.points.rv1_combo:cs.points.rv1; }
+    else              { rv2count++; rv2pts += cs.points.rv2; }
+  });
+  const rvPtsTotal = rv1pts + rv2pts;
 
-  const statRow = (label, val, color, note) =>
-    `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border-light);">
-      <span style="color:var(--text-muted);font-size:0.76rem;">${label}</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${color||'var(--text)'};font-size:0.82rem;">${val}${note?`<span style="font-size:0.68rem;font-weight:400;color:var(--text-muted);margin-left:6px;">${note}</span>`:''}</span>
-    </div>`;
+  // Bonus tier table — all tiers with arrow pointing at active
+  const activeTierIdx = S.bonusTiers.findIndex(t => qp >= t.quality);
+  const tierRows = S.bonusTiers.map((tier, i) => {
+    const active = i === activeTierIdx;
+    const bg = active ? 'background:rgba(5,150,105,0.12);' : (i%2===0?'':'background:rgba(0,0,0,0.02);');
+    const fw = active ? 'font-weight:700;' : 'color:var(--text-muted);';
+    return `<tr style="${bg}${fw}">
+      <td style="padding:5px 8px;">≥ ${tier.quality}%</td>
+      <td style="padding:5px 8px;font-family:'JetBrains Mono',monospace;color:${active?'var(--green)':''};">${tier.bonus}%</td>
+      <td style="padding:5px 8px;">${active?`← <b>your QP ${qp.toFixed(2)}% lands here</b>`:''}</td>
+    </tr>`;
+  }).join('');
 
-  const section = (title, color, content) =>
-    `<div style="background:var(--surface2);border-radius:10px;padding:14px 16px;border:1px solid var(--border);margin-bottom:12px;">
-      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${color};margin-bottom:10px;">${title}</div>
-      ${content}
-    </div>`;
+  // ── SECTION 0: Identity ───────────────────────────────────
+  const sec0 = _detailSection('🪪','Tech Identity','var(--text-muted)','', `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">
+      ${_kv('Tech ID',   `<b style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${techId}</b>`, 'var(--text)')}
+      ${_kv('Full Name', tech.name||'—',  'var(--text)')}
+      ${_kv('Team',      tech.team||'—',  'var(--text-muted)')}
+      ${_kv('Team #',    tech.teamNum||'—','var(--text-muted)')}
+      ${_kv('Month',     tech.month||'—', 'var(--text-muted)')}
+      ${_kv('GSD',       gsd,             'var(--text-muted)', 'Used for all fix point lookups')}
+      ${_kv('Block Type',isIR?_badge('IR','var(--amber)'):_badge('Non-IR','var(--border)','var(--text-muted)'), 'var(--text)', isIR?'RV1 rate and IR modifier apply':'')}
+    </div>`);
 
-  // Task counts section
-  const taskContent = [
-    statRow('Initial Tags (QC)', tech.initial, 'var(--accent)', `× ${cs.points.qc} = ${qcPts.toFixed(4)} pts`),
-    statRow('i3QA Reviews', tech.i3qa, 'var(--accent)', `× ${cs.points.i3qa.toFixed(6)} ≈ ${i3qaPts.toFixed(4)} pts`),
-    statRow('Fix Tasks', tech.fix, 'var(--accent)', `Cat × GSD${isIR?` × ${cs.irModifierValue} IR`:''}  → see breakdown`),
-    statRow('RV Tasks', tech.rv, 'var(--accent)', `RV1=${isIR?cs.points.rv1_combo:cs.points.rv1} | RV2+=${cs.points.rv2}`),
-    statRow('Missed / Rework', tech.missed, tech.missed>0?'var(--red)':'var(--text-muted)', 'attributed to this QC tech'),
-    statRow('Refix', tech.refix, tech.refix>0?'var(--amber)':'var(--text-muted)', '→ lowers Fix Quality %'),
-    statRow('Warnings', tech.warn, tech.warn>0?'var(--amber)':'var(--text-muted)', '→ lowers Fix Quality %'),
-  ].join('');
+  // ── SECTION 1: Task counts summary ───────────────────────
+  const sec1 = _detailSection('📋','Task Counts — What This Tech Did','var(--accent)',
+    'Each task type earns points at different rates', `
+    <div style="font-size:0.71rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+      A tech can earn from multiple task types in the same project period. The counts below come directly from the DBF records where this tech ID appears in the corresponding column.
+    </div>
+    ${_kv('Initial Tags (QC_ID)',   `${tech.initial} tasks`,  'var(--accent)',
+      `This tech appears as QC_ID on ${tech.initial} rows. Each earns ${cs.points.qc} pts flat.`)}
+    ${_kv('  → Points',            `${tech.initial} × ${cs.points.qc} = <b>${qcPts.toFixed(4)}</b>`, 'var(--accent)', '', false)}
+    ${_kv('i3QA Reviews (I3QA_ID)',`${tech.i3qa} tasks`,     '#8b5cf6',
+      `Appears as I3QA_ID on ${tech.i3qa} rows. Each earns 1/12 of a point.`)}
+    ${_kv('  → Points',            `${tech.i3qa} × ${cs.points.i3qa.toFixed(6)} = <b>${i3qaPts.toFixed(4)}</b>`, '#8b5cf6', '', false)}
+    ${_kv('Fix Tasks (FIX1–5_ID)', `${tech.fix} tasks`,      'var(--green)',
+      `Appears as a fix tech on ${tech.fix} rows across rounds 1–5. Value depends on category + GSD${isIR?' + IR modifier':''}.`)}
+    ${_kv('  → Points (see cat breakdown below)', `<b>${fixPtsTotal.toFixed(4)}</b>`, 'var(--green)', '', false)}
+    ${_kv('RV Tasks (RV1–4_ID)',   `${tech.rv} tasks`,       'var(--amber)',
+      `RV1: ${rv1count} tasks × ${isIR?cs.points.rv1_combo:cs.points.rv1} = ${rv1pts.toFixed(4)} | RV2+: ${rv2count} tasks × ${cs.points.rv2} = ${rv2pts.toFixed(4)}`)}
+    ${_kv('  → Points',            `<b>${rvPtsTotal.toFixed(4)}</b>`, 'var(--amber)', '', false)}
+    <div style="border-top:2px solid var(--border);margin-top:8px;padding-top:8px;">
+      ${_kv('Missed / Rework (as QC_ID)', `${tech.missed}`, tech.missed>0?'var(--red)':'var(--text-muted)',
+        `Times this tech\'s initial tag was later marked as a miss. Does NOT deduct points directly — but raises quality concern.`)}
+      ${_kv('Refix tasks', tech.refix, tech.refix>0?'var(--red)':'var(--text-muted)',
+        `Records where this tech\'s fix was sent back. Counted in the Fix Quality % denominator (lowers QP%).`)}
+      ${_kv('Warnings', tech.warn, tech.warn>0?'var(--amber)':'var(--text-muted)',
+        `RV label matched a warning pattern on this tech\'s fix. Also counted in denominator.`)}
+    </div>
+    ${_formulaBox(`Total Raw Points = ${qcPts.toFixed(4)} (QC) + ${i3qaPts.toFixed(4)} (i3QA) + ${fixPtsTotal.toFixed(4)} (Fix) + ${rvPtsTotal.toFixed(4)} (RV) = ${tech.points.toFixed(4)}`)}`);
 
-  // Quality % section
-  const denom = tech.fix + tech.refix + tech.warn;
-  const qualContent = [
-    statRow('Fix count', tech.fix, 'var(--green)'),
-    statRow('+ Refix count', tech.refix, tech.refix>0?'var(--red)':'var(--text-muted)'),
-    statRow('+ Warning count', tech.warn, tech.warn>0?'var(--red)':'var(--text-muted)'),
-    statRow('= Denominator', denom, 'var(--text)'),
-    `<div style="padding:6px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;">
-      <span style="color:var(--text-muted);font-size:0.76rem;">Fix Quality %  (Fix ÷ Denom)</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${qpColor};font-size:1rem;">${qp.toFixed(2)}%</span>
-    </div>`,
-    `<div style="padding:6px 0;display:flex;justify-content:space-between;align-items:center;">
-      <span style="color:var(--text-muted);font-size:0.76rem;">Bonus Earned % (from tier table)</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${threshApplied?'var(--green)':'var(--accent)'};font-size:0.9rem;">
-        ${qualMod}%${threshApplied?'  <span style="font-size:0.65rem;background:var(--green);color:#fff;border-radius:3px;padding:1px 5px;margin-left:4px;">★ Threshold</span>':''}
-      </span>
-    </div>`,
-  ].join('');
+  // ── SECTION 2: Fix breakdown by category ─────────────────
+  const fixCatRows = Object.keys(catMap).sort((a,b)=>+a-+b).map((c,i)=>{
+    const d=catMap[c];
+    const bg = i%2===0?'':'background:rgba(0,0,0,0.02);';
+    return `<tr style="${bg}">
+      <td style="padding:6px 10px;">Cat ${c}</td>
+      <td style="padding:6px 10px;font-family:'JetBrains Mono',monospace;">${d.unitVal}</td>
+      ${isIR?`<td style="padding:6px 10px;font-family:'JetBrains Mono',monospace;color:var(--amber);">${(d.unitVal*(cs.irModifierValue)).toFixed(4)}</td>`:''}
+      <td style="padding:6px 10px;text-align:center;">${d.count}</td>
+      <td style="padding:6px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--green);">${d.totalPts.toFixed(4)}</td>
+    </tr>`;
+  }).join('');
 
-  // Bonus calc section
-  const bonusContent = [
-    statRow('Total Points', tech.points.toFixed(4), 'var(--accent)'),
-    statRow('Bonus Earned %', `${qualMod}%`, threshApplied?'var(--green)':'var(--text)', threshApplied?'(threshold override)':''),
-    statRow('Base Bonus  (Points × Bonus%)', baseBonus.toFixed(4), 'var(--accent)'),
-    statRow('PHP Multiplier', mult.toFixed(2), 'var(--text-muted)'),
-    `<div style="padding:8px 0;border-top:2px solid var(--border);margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-weight:700;font-size:0.82rem;">Total Bonus  (Points × Mult × Bonus%)</span>
-      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--green);font-size:1.05rem;">${totalBonus.toFixed(4)}</span>
-    </div>`,
-    `<div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);background:var(--blue-light);border-radius:6px;padding:7px 10px;border-left:3px solid var(--accent);">
-      Formula: <b style="font-family:'JetBrains Mono',monospace">${tech.points.toFixed(4)} × ${mult.toFixed(2)} × (${qualMod}/100) = ${totalBonus.toFixed(4)}</b>
-    </div>`,
-  ].join('');
+  const sec2 = _detailSection('🗂️','Fix Points by Category','var(--green)',
+    `GSD: ${gsd}${isIR?` · IR ×${cs.irModifierValue}`:''}`, fixCatRows.length ? `
+    <div style="font-size:0.71rem;color:var(--text-muted);margin-bottom:10px;">
+      Fix point value = <b>Cat lookup value @ ${gsd}</b>${isIR?` × <b>${cs.irModifierValue}</b> IR modifier`:''}.
+      Higher-numbered categories represent less severe errors and earn fewer points.
+      This table shows exactly how many fixes this tech did in each category and what each was worth.
+    </div>
+    <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border);">
+      <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+        <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+          <th style="padding:7px 10px;text-align:left;">Category</th>
+          <th style="padding:7px 10px;text-align:left;">Unit Value @ ${gsd}</th>
+          ${isIR?`<th style="padding:7px 10px;text-align:left;">After IR Mod</th>`:''}
+          <th style="padding:7px 10px;text-align:center;">Count</th>
+          <th style="padding:7px 10px;text-align:right;">Subtotal pts</th>
+        </tr></thead>
+        <tbody>${fixCatRows}</tbody>
+        <tfoot>
+          <tr style="background:var(--surface2);border-top:2px solid var(--border);font-weight:700;">
+            <td colspan="${isIR?3:2}" style="padding:7px 10px;">Total Fix Points</td>
+            <td style="padding:7px 10px;text-align:center;">${tech.fix}</td>
+            <td style="padding:7px 10px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--green);">${fixPtsTotal.toFixed(4)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>` : `<div style="color:var(--text-muted);font-size:0.76rem;">No fix source records found — fix point detail unavailable.</div>`);
 
-  document.getElementById('td-title').textContent = `👤 ${tech.name || techId}  (${techId})`;
+  // ── SECTION 3: Fix Quality % ──────────────────────────────
+  const sec3 = _detailSection('📊','Fix Quality % Calculation',qpColor,
+    'Determines which bonus tier you land in', `
+    <div style="font-size:0.71rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+      Fix Quality % measures how "clean" the tech's fix work was. Every refix (a fix that had to be redone)
+      and every warning from the reviewer hurts this percentage. <b>100% = zero refixes and zero warnings.</b>
+    </div>
+    ${_kv('✅ Clean Fix count',    tech.fix,   'var(--green)',  'Rows where this tech fixed without issue')}
+    ${_kv('🔁 + Refix count',     tech.refix, tech.refix>0?'var(--red)':'var(--text-muted)', 'Fix was rejected and had to be redone → added to denominator')}
+    ${_kv('⚠ + Warning count',    tech.warn,  tech.warn>0?'var(--amber)':'var(--text-muted)', 'Reviewer flagged a problem → added to denominator')}
+    ${_kv('= Denominator',        denom,      'var(--text)',   'Total of all fix-related events')}
+    ${_formulaBox(`Fix Quality % = ${tech.fix} ÷ ${denom} = <b>${qp.toFixed(4)}%</b>`)}
+    <div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:10px;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:8px;">All Bonus Tiers — where does ${qp.toFixed(2)}% land?</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.74rem;border-radius:7px;overflow:hidden;border:1px solid var(--border);">
+        <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+          <th style="padding:6px 10px;text-align:left;">QP % Threshold</th>
+          <th style="padding:6px 10px;text-align:left;">Bonus Earned %</th>
+          <th style="padding:6px 10px;text-align:left;">Status</th>
+        </tr></thead>
+        <tbody>${tierRows}</tbody>
+      </table>
+      ${threshApplied ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(5,150,105,0.1);border-radius:6px;border-left:3px solid var(--green);font-size:0.71rem;color:var(--green);">
+        ★ <b>Threshold Override Active:</b> a minimum threshold bonus was applied instead of the tier value.
+      </div>` : ''}
+    </div>`);
+
+  // ── SECTION 4: Bonus payout ───────────────────────────────
+  // Always read the live multiplier from the tech object (updated by recalcBonus())
+  // so the modal matches exactly what the table shows
+  const liveMult      = tech.bonusMultiplier ?? tech.bonusMult ?? currentBonusMultiplier;
+  const liveBaseBonus = tech.baseBonus  || 0;
+  const liveTotalBonus= tech.totalBonus || 0;
+
+  // Recompute from scratch to verify they match (catches any stale snapshot)
+  const recomputedBase  = threshApplied
+    ? tech.points * (getThresholdBonus(qp) / 100)
+    : tech.points * (qualMod / 100);
+  const recomputedTotal = recomputedBase * liveMult;
+  const drift = Math.abs(recomputedTotal - liveTotalBonus) > 0.0001;
+
+  const sec4 = _detailSection('💵','Bonus Payout Calculation','var(--green)',
+    'Step-by-step from raw points to PHP bonus', `
+    <div style="font-size:0.71rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+      The bonus is calculated in <b>three steps</b>:<br>
+      ① Sum all raw task points → ② multiply by the Bonus Earned % (from Fix Quality tier) → ③ multiply by the PHP payout multiplier.<br>
+      The breakdown below is <b>live</b> — it matches exactly what the Payout w/ Mult column shows in the table.
+    </div>
+
+    ${_kv('Step 1 — Total Raw Points', tech.points.toFixed(4), 'var(--accent)',
+      `QC ${qcPts.toFixed(4)} + i3QA ${i3qaPts.toFixed(4)} + Fix ${fixPtsTotal.toFixed(4)} + RV ${rvPtsTotal.toFixed(4)}`)}
+
+    ${_kv('Step 2 — Bonus Earned %',
+      `${qualMod}%&nbsp;${threshApplied ? _badge('★ Threshold override','var(--green)') : _badge('from tier table','var(--border)','var(--text-muted)')}`,
+      threshApplied ? 'var(--green)' : 'var(--accent)',
+      threshApplied
+        ? `Threshold floor active — your QP of ${qp.toFixed(2)}% triggered a guaranteed minimum bonus % instead of the standard tier`
+        : `QP ${qp.toFixed(2)}% falls into the ≥${S.bonusTiers.find(t=>qp>=t.quality)?.quality??'?'}% tier → ${qualMod}% bonus earned`, false)}
+
+    ${_kv('  → Base Bonus  (Points × Bonus% ÷ 100)',
+      `${tech.points.toFixed(4)} × ${qualMod} ÷ 100 = <b>${liveBaseBonus.toFixed(4)}</b>`,
+      'var(--accent)', 'This is "Payout w/o Mult" column in the table', false)}
+
+    <div style="margin:10px 0;padding:10px 14px;background:var(--blue-light);border-radius:8px;border:1px solid var(--border);">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Step 3 — PHP Payout Multiplier</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:0.76rem;color:var(--text-muted);line-height:1.5;">
+          Set from the <b>SQM bracket table</b> (loaded when project is imported) or overridden manually in the
+          <b>Payout Calculator</b> panel. This value multiplies the base bonus to convert points into PHP payout.
+          <br><span style="color:var(--accent);font-size:0.69rem;">Current multiplier shown here = the one applied to the table right now.</span>
+        </div>
+        <div style="text-align:center;min-width:80px;">
+          <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:2px;">Multiplier</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;color:var(--accent);">×${liveMult.toFixed(2)}</div>
+          <div style="font-size:0.66rem;color:var(--text-muted);margin-top:1px;">SQM: ${importSettings.sqm||'—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:${drift?'rgba(239,68,68,0.08)':'rgba(5,150,105,0.08)'};border:2px solid ${drift?'var(--red)':'var(--green)'};border-radius:10px;padding:14px 16px;margin-top:4px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:0.9rem;color:${drift?'var(--red)':'var(--green)'};">
+            ${drift ? '⚠ Calculation mismatch detected' : '✅ Verified — matches table exactly'}
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;line-height:1.5;">
+            Points × Multiplier × (Bonus% ÷ 100)<br>
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--text);">
+              ${tech.points.toFixed(4)} × ${liveMult.toFixed(2)} × (${qualMod} ÷ 100)
+            </span>
+          </div>
+          ${drift ? `<div style="font-size:0.68rem;color:var(--red);margin-top:4px;">
+            Table shows ${liveTotalBonus.toFixed(4)} but formula gives ${recomputedTotal.toFixed(4)} — try recalculating.
+          </div>` : ''}
+        </div>
+        <div style="text-align:right;min-width:120px;">
+          <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">Final Payout (PHP)</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.5rem;color:${drift?'var(--red)':'var(--green)'};">${liveTotalBonus.toFixed(4)}</div>
+          <div style="font-size:0.64rem;color:var(--text-muted);margin-top:2px;">"Payout w/ Mult" column</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+      <div style="background:var(--surface2);border-radius:8px;padding:8px;border:1px solid var(--border);">
+        <div style="font-size:0.63rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Raw Points</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;color:var(--accent);margin-top:2px;">${tech.points.toFixed(4)}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px;border:1px solid var(--border);">
+        <div style="font-size:0.63rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Base Bonus (no mult)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;color:var(--accent);margin-top:2px;">${liveBaseBonus.toFixed(4)}</div>
+      </div>
+      <div style="background:rgba(5,150,105,0.1);border-radius:8px;padding:8px;border:1px solid var(--green);">
+        <div style="font-size:0.63rem;color:var(--green);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Final Payout</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;color:var(--green);margin-top:2px;">${liveTotalBonus.toFixed(4)}</div>
+      </div>
+    </div>`);
+
+  document.getElementById('td-title').textContent = `${tech.name || techId}  (${techId})`;
   document.getElementById('td-subtitle').textContent =
-    `${tech.team || '—'}  ·  ${tech.teamNum || '—'}  ·  ${tech.month || ''}  ·  GSD: ${gsd}  ·  ${isIR ? 'IR' : 'Non-IR'}`;
-
-  document.getElementById('td-body').innerHTML =
-    section('① Task Counts & Raw Point Contributions', 'var(--accent)', taskContent) +
-    section('② Fix Quality % Calculation', qpColor, qualContent) +
-    section('③ Bonus Payout Calculation', 'var(--green)', bonusContent);
-
+    `${tech.team||'—'}  ·  Team ${tech.teamNum||'—'}  ·  ${tech.month||''}  ·  GSD: ${gsd}  ·  ${isIR?'IR':'Non-IR'}`;
+  document.getElementById('td-body').innerHTML = sec0 + sec1 + sec2 + sec3 + sec4;
   document.getElementById('tech-detail-modal').classList.add('show');
 }
 
