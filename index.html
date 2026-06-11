@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IC Fixpoints Viewer · Phili v9</title>
+<title>IC Fixpoints Viewer · Phili v12</title>
 <meta name="description" content="IC Fixpoints Viewer — Phili internal tool for fixpoint task tracking and bonus calculation.">
 <meta name="theme-color" content="#0f1e32">
 <style>
@@ -1837,8 +1837,12 @@ function buildTechStats(rawRecords) {
       }
     });
 
-    // ── QC task ──────────────────────────────────────────────
-    det.taskColumns.qc.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.qc, 'qc', 'qc'));
+    // ── QC task (initial tagging) ─────────────────────────────
+    // Points go to the QC_ID tech — det.taskColumns.qc lists the column(s) holding that ID
+    {
+      const qcId = det.taskColumns.qc.map(c => get(c.toUpperCase()).trim().toUpperCase()).find(Boolean);
+      if (qcId) addPoints(qcId, cs.points.qc, 'qc', 'qc');
+    }
 
     // ── I3 Missed/Rework — attributed to QC tech when I3QA_LABEL is a miss label ──
     {
@@ -1854,11 +1858,22 @@ function buildTechStats(rawRecords) {
     }
 
     // ── i3QA task ────────────────────────────────────────────
-    det.taskColumns.i3qa.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.i3qa, 'i3qa', 'i3qa'));
+    {
+      const i3qaId = det.taskColumns.i3qa.map(c => get(c.toUpperCase()).trim().toUpperCase()).find(Boolean);
+      if (i3qaId) addPoints(i3qaId, cs.points.i3qa, 'i3qa', 'i3qa');
+    }
 
     // ── RV tasks ─────────────────────────────────────────────
-    det.taskColumns.rv1.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), isComboIR ? cs.points.rv1_combo : cs.points.rv1, 'rv', 'rv'));
-    det.taskColumns.rv2.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.rv2, 'rv', 'rv'));
+    // RV1: award RV1 points to RV1_ID tech
+    {
+      const rv1Id = det.taskColumns.rv1.map(c => get(c.toUpperCase()).trim().toUpperCase()).find(Boolean);
+      if (rv1Id) addPoints(rv1Id, isComboIR ? cs.points.rv1_combo : cs.points.rv1, 'rv', 'rv');
+    }
+    // RV2+: award RV2 points to RV2_ID (and beyond) techs
+    det.taskColumns.rv2.forEach(c => {
+      const rvId = get(c.toUpperCase()).trim().toUpperCase();
+      if (rvId && techStats[rvId]) addPoints(rvId, cs.points.rv2, 'rv', 'rv');
+    });
 
     // ── QC Penalty — deduct from QC tech, transfer to i3QA tech ─────────────
     {
@@ -1912,9 +1927,13 @@ function buildTechStats(rawRecords) {
     // Multiplier column always shows the user's input value — threshold only changes Bonus Earned %
     t.bonusMultiplier = currentBonusMultiplier;
     t.thresholdApplied = thresholdBonus !== null;
-    t.totalBonus = thresholdBonus !== null
-      ? t.points * currentBonusMultiplier * (thresholdBonus / 100)
-      : t.points * currentBonusMultiplier * qualityMod;
+    if (thresholdBonus !== null) {
+      t.baseBonus = t.points * (thresholdBonus / 100);
+      t.totalBonus = t.points * currentBonusMultiplier * (thresholdBonus / 100);
+    } else {
+      t.baseBonus = t.points * qualityMod;
+      t.totalBonus = t.points * currentBonusMultiplier * qualityMod;
+    }
     return t;
   });
 }
@@ -2037,14 +2056,19 @@ function buildTechSummary(rows) {
     }
 
     // ── Fix tasks ─────────────────────────────────────────────
-    // Each fix round's points go to that round's fix tech
+    // Each fix round's points go to that round's fix tech.
+    // Round 1 uses CATEGORY; rounds 2-4 use RV(n-1)_CAT; round 5 falls back to CATEGORY.
+    const fixCatCols = [null, 'CATEGORY', 'RV1_CAT', 'RV2_CAT', 'RV3_CAT', 'CATEGORY'];
     for(let i=1;i<=5;i++){
       const f=raw[`FIX${i}_ID`];
       if(f){
         ensure(f);
+        const catCol = fixCatCols[i];
+        const catForRound = raw[catCol] || raw['CATEGORY'] || '';
+        const roundGsdVal = getCatGsdValue(catForRound, importSettings.gsd);
         map[f].fix++;
         map[f]._src.fix.push(r);
-        map[f].points += gsdVal * irM;
+        map[f].points += roundGsdVal * irM;
       }
     }
 
