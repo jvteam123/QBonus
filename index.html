@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IC Fixpoints Viewer · Phili</title>
+<title>IC Fixpoints Viewer · Phili v9</title>
 <meta name="description" content="IC Fixpoints Viewer — Phili internal tool for fixpoint task tracking and bonus calculation.">
 <meta name="theme-color" content="#0f1e32">
 <style>
@@ -282,7 +282,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div class="icon">📍</div>
       <h1>IC Fixpoints <span style="font-weight:400;color:rgba(255,255,255,0.45);font-size:0.72rem;margin-left:2px;letter-spacing:0.02em;">VIEWER · PHILI</span></h1>
     </div>
-    <span style="font-size:0.62rem;font-weight:700;color:rgba(14,165,233,0.7);background:rgba(14,165,233,0.1);padding:2px 7px;border-radius:4px;border:1px solid rgba(14,165,233,0.2);letter-spacing:0.06em;">v8.0</span>
+    <span style="font-size:0.62rem;font-weight:700;color:rgba(14,165,233,0.7);background:rgba(14,165,233,0.1);padding:2px 7px;border-radius:4px;border:1px solid rgba(14,165,233,0.2);letter-spacing:0.06em;">v9.0</span>
     <div id="project-badge">
       <span class="pb-site" id="pb-site">—</span>
       <span class="pb-gsd" id="pb-gsd">6in</span>
@@ -295,7 +295,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <button class="btn btn-settings" onclick="openSettings()" title="Configure categories, points, detection rules, tech roster &amp; teams">⚙ Settings &amp; Roster</button>
       <button class="btn btn-ghost" onclick="openSaveModal()" id="btn-save-project" style="display:none">💾 Save Project</button>
       <button class="btn btn-primary" onclick="triggerFileInput()">⬆ Import File</button>
-      <input type="file" id="file-input-hidden" accept=".zip,.dbf" style="display:none" />
+      <input type="file" id="file-input-hidden" accept=".zip,.dbf" multiple style="display:none" />
     </div>
   </div>
 
@@ -337,11 +337,11 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <!-- DROPZONE -->
       <div id="dropzone-wrap">
         <div id="dropzone">
-          <input type="file" id="file-input-dz" accept=".zip,.dbf" />
+          <input type="file" id="file-input-dz" accept=".zip,.dbf" multiple />
           <div class="dz-icon">📂</div>
           <h2 style="font-size:1.05rem;font-weight:700;color:var(--text);">Drop your Fixpoints file here</h2>
           <p>Accepts .zip (containing .dbf) or a bare .dbf file</p>
-          <div class="dz-hint">Points calculated per Phili IC formula · Configure GSD & type before or after import</div>
+          <div class="dz-hint">Drop one or multiple .dbf files · They will be merged into one project</div>
         </div>
       </div>
 
@@ -390,9 +390,9 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
         <!-- Bonus Panel (Tech view only) -->
         <div id="bonus-panel-wrap">
           <div class="bonus-panel">
-            <strong>🎯 Bonus Calculator</strong>
+            <strong>🎯 Payout Calculator</strong>
             <div class="bp-group">
-              <label>Base PHP Multiplier:</label>
+              <label>Multiplier:</label>
               <input type="number" id="bp-manual-mult" class="bp-input" value="9.50" min="0" step="0.01" oninput="recalcBonus()" />
             </div>
             <div class="bp-group">
@@ -494,8 +494,8 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
                 <th onclick="sortTech('points')">Total Points</th>
                 <th onclick="sortTech('qp')">Fix Quality %</th>
                 <th onclick="sortTech('qualityPctMod')">Quality<br>% Mod</th>
-                <th onclick="sortTech('bonusMultiplier')">Bonus<br>Mult (PHP)</th>
-                <th onclick="sortTech('totalBonus')">Total Bonus<br>(PHP)</th>
+                <th onclick="sortTech('bonusMultiplier')">Mult</th>
+                <th onclick="sortTech('totalBonus')">Payout</th>
               </tr>
             </thead>
             <tbody id="tech-body"></tbody>
@@ -508,7 +508,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           <!-- Calc All Toolbar -->
           <div class="toolbar" id="ca-toolbar">
             <div class="toolbar-group">
-              <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted)">Base PHP Multiplier:</span>
+              <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted)">Multiplier:</span>
               <input type="number" id="ca-mult" class="mod-input" value="9.50" step="0.01" min="0" style="width:90px;" />
               <button class="btn btn-primary" onclick="runCalcAll()" style="padding:7px 18px;">⚡ Calculate All</button>
             </div>
@@ -542,7 +542,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <div class="stat-cell"><div class="sc-label"># Fix</div><div class="sc-value" id="cas-fix">0</div></div>
             <div class="stat-cell amber"><div class="sc-label"># Missed/Rework</div><div class="sc-value" id="cas-missed">0</div></div>
             <div class="stat-cell red"><div class="sc-label"># Refix</div><div class="sc-value" id="cas-refix">0</div></div>
-            <div class="stat-cell"><div class="sc-label">Total Bonus</div><div class="sc-value green" id="cas-bonus" style="font-size:0.9rem;">₱0</div></div>
+            <div class="stat-cell"><div class="sc-label">Total Payout</div><div class="sc-value green" id="cas-bonus" style="font-size:0.9rem;">0</div></div>
             <div class="stat-cell"><div class="sc-label">Projects</div><div class="sc-value" id="cas-projects">0</div></div>
           </div>
           <!-- Progress bar -->
@@ -573,8 +573,8 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
                   <th onclick="sortCalcAll('points')">Total Points</th>
                   <th onclick="sortCalcAll('qp')">Fix Quality %</th>
                   <th onclick="sortCalcAll('qualityPctMod')">Quality<br>% Mod</th>
-                  <th onclick="sortCalcAll('bonusMult')">Bonus<br>Mult (PHP)</th>
-                  <th onclick="sortCalcAll('totalBonus')">Total Bonus<br>(PHP)</th>
+                  <th onclick="sortCalcAll('bonusMult')">Mult</th>
+                  <th onclick="sortCalcAll('totalBonus')">Payout</th>
                   <th>Projects</th>
                 </tr>
               </thead>
@@ -713,7 +713,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           <span style="font-size:0.75rem;color:var(--text-muted)">  (Applied to all IR-flagged fix task point values)</span>
         </div>
         <div class="tgl-row">
-          <label>Bonus Floor (PHP):</label>
+          <label>Bonus Floor:</label>
           <input type="number" id="bonus-floor-input" class="mod-input" step="0.5" min="1" max="50" value="9.5" style="width:100px;" />
           <span style="font-size:0.75rem;color:var(--text-muted)">  (Minimum Bonus Multiplier regardless of calculations)</span>
         </div>
@@ -812,7 +812,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
 
       <!-- Bonus Thresholds -->
       <div class="stab-content" id="tab-bonus">
-        <div class="settings-info">Configure bonus tier overrides. When Fix Quality % meets a threshold, that <strong>Bonus Earned %</strong> replaces the standard quality tier lookup. Formula: Points × Base PHP Multiplier × (Bonus Earned % ÷ 100).</div>
+        <div class="settings-info">Configure bonus tier overrides. When Fix Quality % meets a threshold, that <strong>Bonus Earned %</strong> replaces the standard quality tier lookup. Formula: Points × Multiplier × (Bonus Earned % ÷ 100).</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px;">
           <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid var(--border-light);">
             <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:12px;">🏆 Top Tier</div>
@@ -842,7 +842,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           </div>
         </div>
         <div style="margin-top:16px;padding:10px 14px;background:var(--blue-light);border-radius:8px;font-size:0.75rem;color:var(--text-muted);border-left:3px solid var(--accent);">
-          These thresholds override the standard bonus multiplier for individual techs who achieve the target quality %. The Bonus Panel multiplier is still used as the base for techs below the thresholds.
+          These thresholds override the standard Bonus Earned % for techs who achieve the target quality %. The Multiplier is always applied as-is.
         </div>
       </div>
 
@@ -970,6 +970,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
   <div class="modal modal-md">
     <div class="modal-header">
       <h3>➕ New Project</h3>
+      <span style="font-size:0.72rem;color:var(--text-muted);margin-left:8px;align-self:center;">Multiple .dbf files will be merged into one project</span>
       <button class="modal-close" onclick="closeModal('new-project-modal')">✕</button>
     </div>
     <div class="modal-body">
@@ -1034,15 +1035,25 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           </div>
         </div>
 
-        <!-- Dropzone -->
+        <!-- Dropzone (multi-file) -->
         <div class="opt-row" style="align-items:flex-start;">
-          <label style="padding-top:10px;">File</label>
-          <div id="np-dropzone" onclick="document.getElementById('np-file-input').click()"
-            style="flex:1;border:2px dashed var(--border);border-radius:10px;background:#f7f9fc;padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;min-width:0;">
-            <input type="file" id="np-file-input" accept=".zip,.dbf" style="display:none" onchange="npFileChosen(this)" />
-            <div id="np-dz-icon" style="font-size:1.8rem;margin-bottom:6px;">📂</div>
-            <div id="np-dz-text" style="font-size:0.82rem;font-weight:600;color:#37474f;">Drop .dbf or .zip here</div>
-            <div id="np-dz-sub" style="font-size:0.72rem;color:#90a4ae;margin-top:3px;">or click to browse</div>
+          <label style="padding-top:10px;">Files</label>
+          <div style="flex:1;min-width:0;">
+            <div id="np-dropzone" onclick="document.getElementById('np-file-input').click()"
+              style="border:2px dashed var(--border);border-radius:10px;background:#f7f9fc;padding:18px 16px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;">
+              <input type="file" id="np-file-input" accept=".zip,.dbf" multiple style="display:none" onchange="npFileChosen(this)" />
+              <div id="np-dz-icon" style="font-size:1.8rem;margin-bottom:6px;">📂</div>
+              <div id="np-dz-text" style="font-size:0.82rem;font-weight:600;color:#37474f;">Drop .dbf / .zip files here</div>
+              <div id="np-dz-sub" style="font-size:0.72rem;color:#90a4ae;margin-top:3px;">or click to browse — multiple files supported</div>
+            </div>
+            <!-- file list -->
+            <div id="np-file-list" style="margin-top:8px;display:none;max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);">
+              <div style="padding:6px 10px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;">
+                <span id="np-file-count">0 files</span>
+                <button onclick="npClearFiles()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:0.72rem;font-weight:600;padding:0 4px;" title="Remove all files">✕ Clear all</button>
+              </div>
+              <ul id="np-file-items" style="list-style:none;margin:0;padding:4px 0;"></ul>
+            </div>
           </div>
         </div>
 
@@ -1170,12 +1181,12 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div style="margin-bottom:20px;">
         <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
           <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">4</span>
-          Bonus Calculation — final PHP payout
+          Payout Calculation
         </div>
         <div style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:0.78rem;margin-bottom:10px;">
           <div style="font-weight:700;margin-bottom:8px;color:var(--accent);">Standard formula</div>
-          <code style="font-size:0.84rem;">Bonus = TotalPoints × PHP_Multiplier × (QualityMod% ÷ 100)</code>
-          <div style="margin-top:8px;color:var(--text-muted);">QualityMod% is looked up from the Quality % Modifier table based on the tech's quality rate. PHP Multiplier is set in the Bonus Calculator panel.</div>
+          <code style="font-size:0.84rem;">Payout = TotalPoints × Multiplier × (BonusEarned% ÷ 100)</code>
+          <div style="margin-top:8px;color:var(--text-muted);">BonusEarned% is looked up from the Quality % Modifier table. Multiplier is set in the Bonus Calculator panel.</div>
         </div>
         <div style="background:#fef3c7;border-radius:10px;padding:14px 16px;font-size:0.78rem;border-left:4px solid var(--amber);">
           <div style="font-weight:700;margin-bottom:6px;color:#92400e;">★ Threshold bonus (overrides if quality ≥ threshold)</div>
@@ -1387,7 +1398,7 @@ let TECH_ROSTER = {
   '7244AA':{name:'Arjohn Abapo',team:'Team Jeave',teamNum:'T_123'},
   '7247JA':{name:'Jayson Aliser',team:'Team Jeave',teamNum:'T_123'},
   '7248AA':{name:'Allan Paul Alforque',team:'Team Jeave',teamNum:'T_123'},
-  '7251JD':{name:'Jan Dominic Dela Cruz',team:'Team Jeave',teamNum:'T_123'},
+  '7251JD':{name:'Jan Dominic Dela Cruz',team:'Team Nikki',teamNum:'T_114'},
   '7314VP':{name:'Vince April Pitogo',team:'Team Jeave',teamNum:'T_123'},
   '7042NB':{name:'Nikki Carlos Booc',team:'Team Nikki',teamNum:'T_114'},
   '4283JP':{name:'Janriel Paanod',team:'Team Nikki',teamNum:'T_114'},
@@ -1399,7 +1410,7 @@ let TECH_ROSTER = {
   '7239EO':{name:'Eric Jason Omega',team:'Team Nikki',teamNum:'T_114'},
   '4477PT':{name:'Pacifico Tejam',team:'Team Nikki',teamNum:'T_114'},
   '7251DJ':{name:'Jan Dominic Dela Cruz (Nikki)',team:'Team Nikki',teamNum:'T_114'},
-  '7233JP':{name:'Jeobenail li Parame',team:'Team Nikki',teamNum:'T_114'},
+  '7233JP':{name:'Jeobenail li Parame',team:'Team Jack',teamNum:'T_64'},
   '4135RC':{name:'Cantiveros, Ritche Bayo',team:'Team Nikki',teamNum:'T_114'},
   '7315CR':{name:'Christiane Repunte',team:'Team Nikki',teamNum:'T_114'},
   '7243JC':{name:'John Cañete',team:'Team Nikki',teamNum:'T_114'},
@@ -1676,7 +1687,6 @@ function buildTechStats(rawRecords) {
     const qualityMod = calculateQualityModifier(qp);
     // Check bonus thresholds — if tech meets a threshold, use that PHP multiplier (flat, no extra quality mod)
     const thresholdBonus = getThresholdBonus(qp);
-    const effectiveMult = thresholdBonus !== null ? thresholdBonus : currentBonusMultiplier;
     // Alias to match existing renderTechTable column names
     t.initial       = t.qcTasks;
     t.i3qa          = t.i3qaTasks;
@@ -1687,9 +1697,9 @@ function buildTechStats(rawRecords) {
     t.missed        = t.missedTasks;
     t.qp            = qp;
     t.qualityPctMod = Math.round(qualityMod * 100 * 100) / 100;
-    t.bonusMultiplier = effectiveMult;
+    // Multiplier column always shows the user's input value — threshold only changes Bonus Earned %
+    t.bonusMultiplier = currentBonusMultiplier;
     t.thresholdApplied = thresholdBonus !== null;
-    // thresholdBonus is a % (e.g. 120 = 120%) applied to base PHP multiplier
     t.totalBonus = thresholdBonus !== null
       ? t.points * currentBonusMultiplier * (thresholdBonus / 100)
       : t.points * currentBonusMultiplier * qualityMod;
@@ -1994,7 +2004,7 @@ function renderTechTable(){
       <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
       <td class="cell-num" style="color:var(--accent)">${t.bonusMultiplier.toFixed(2)}</td>
-      <td class="cell-points" style="color:${bonusColor}">₱${t.totalBonus.toFixed(2)}</td>
+      <td class="cell-points" style="color:${bonusColor}">${t.totalBonus.toFixed(4)}</td>
     </tr>`;
   }).join('');
   renderTechFoot(filteredTech);
@@ -2015,7 +2025,7 @@ function renderTechFoot(rows){
     <td class="cell-num"><strong>${sum('warn')}</strong></td>
     <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
     <td colspan="3"></td>
-    <td class="cell-points" style="color:var(--green)"><strong>₱${sum('totalBonus').toFixed(2)}</strong></td>
+    <td class="cell-points" style="color:var(--green)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
   </tr>`;
 }
 
@@ -2238,6 +2248,36 @@ async function loadBuffer(buffer,name){
   hideLoading();
   toast(`✓ Loaded ${allRows.length.toLocaleString()} records · ${importSettings.gsd} · ${importSettings.site}`);
 }
+
+// Alias for use in multi-file merge (same as parseDBF)
+function parseDbf(buffer) { return parseDBF(buffer); }
+
+// Load pre-parsed raw rows (used when merging multiple DBF files)
+async function loadParsedRows(rawRecords, name, fileCount) {
+  await new Promise(r => setTimeout(r, 30));
+  allRows = processRecords(rawRecords);
+  filtered = [...allRows];
+  colFilters = {};
+  currentBonusMultiplier = getSqmMultiplier(importSettings.sqm);
+  techRows = buildTechStats(allRows.map(r => r._raw || r));
+  filteredTech = [...techRows];
+  activeTeamFilter = '';
+  sortKey = 'total_points'; sortDir = -1;
+  if (name) currentProjectName = name;
+  filtered.sort((a,b) => b.total_points - a.total_points);
+  currentPage = 1;
+  updateStats(allRows);
+  renderTable();
+  renderTechTable();
+  document.getElementById('dropzone-wrap').style.display = 'none';
+  document.getElementById('content-area').style.display = 'flex';
+  document.getElementById('btn-save-project').style.display = '';
+  updateProjectBadge();
+  hideLoading();
+  const src = fileCount > 1 ? ` from ${fileCount} files` : '';
+  toast(`✓ Loaded ${allRows.length.toLocaleString()} records${src} · ${importSettings.gsd} · ${importSettings.site}`);
+}
+
 
 function updateProjectBadge(){
   const badge=document.getElementById('project-badge');
@@ -2867,7 +2907,7 @@ async function runCalcAll(){
   document.getElementById('cas-fix').textContent = calcAllData.reduce((s,t)=>s+t.fix,0);
   document.getElementById('cas-missed').textContent = calcAllData.reduce((s,t)=>s+t.missed,0);
   document.getElementById('cas-refix').textContent = calcAllData.reduce((s,t)=>s+t.refix,0);
-  document.getElementById('cas-bonus').textContent = '₱' + calcAllData.reduce((s,t)=>s+t.totalBonus,0).toFixed(2);
+  document.getElementById('cas-bonus').textContent = calcAllData.reduce((s,t)=>s+t.totalBonus,0).toFixed(4);
   document.getElementById('cas-projects').textContent = allProjects.length;
   document.getElementById('ca-stats-bar').style.display = '';
 
@@ -2947,7 +2987,7 @@ function renderCalcAllTable(data){
       <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
       <td class="cell-num" style="color:var(--accent)">${(t.bonusMult||0).toFixed(2)}</td>
-      <td class="cell-points" style="color:${bonusColor}">₱${t.totalBonus.toFixed(2)}</td>
+      <td class="cell-points" style="color:${bonusColor}">${t.totalBonus.toFixed(4)}</td>
       <td style="font-size:0.68rem;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(t.projects||[]).join(', ')}">${(t.projects||[]).join(', ')}</td>
     </tr>`;
   }).join('');
@@ -2965,7 +3005,7 @@ function renderCalcAllTable(data){
     <td class="cell-num"><strong>${sum('warn')}</strong></td>
     <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
     <td colspan="3"></td>
-    <td class="cell-points" style="color:var(--green)"><strong>₱${sum('totalBonus').toFixed(2)}</strong></td>
+    <td class="cell-points" style="color:var(--green)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
     <td></td>
   </tr>`;
 }
@@ -2988,15 +3028,23 @@ let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000);}
 function triggerFileInput(){document.getElementById('file-input-hidden').click();}
 
+// Open New Project modal pre-loaded with dropped/selected files
+function openNewProjectWithFiles(files) {
+  const dbfFiles = Array.from(files).filter(f => /\.(dbf|zip)$/i.test(f.name));
+  if (!dbfFiles.length) { toast('Please drop .dbf or .zip files'); return; }
+  openNewProjectModal();
+  dbfFiles.forEach(npAddFile);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // EVENTS
 // ═══════════════════════════════════════════════════════════════
 const dz=document.getElementById('dropzone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
-document.getElementById('file-input-dz').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
-document.getElementById('file-input-hidden').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files.length)openNewProjectWithFiles(e.dataTransfer.files);});
+document.getElementById('file-input-dz').addEventListener('change',e=>{if(e.target.files.length){openNewProjectWithFiles(e.target.files);e.target.value='';}});
+document.getElementById('file-input-hidden').addEventListener('change',e=>{if(e.target.files.length){openNewProjectWithFiles(e.target.files);e.target.value='';}});
 document.getElementById('save-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal('save-modal');});
 document.getElementById('import-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)cancelImport();});
 document.getElementById('settings-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings();});
@@ -3082,9 +3130,13 @@ function openDrillDown(techId, stat) {
   // ── Table columns ─────────────────────────────────────────────
   // Show point column only for tasks that actually earn points
   const showPts = ['initial','i3qa','fix','rv'].includes(stat);
-  const COLS = ['UID','CATEGORY','QC_ID','I3QA_ID','FIX1_ID','FIX1_DATE','RV1_ID','RV1_LABEL','COMBO?'];
+  // For missed stat: add I3QA_LABEL column to make the M flag visible
+  const COLS = stat === 'missed'
+    ? ['UID','CATEGORY','QC_ID','I3QA_ID','I3QA_LABEL','FIX1_ID','RV1_ID','COMBO?']
+    : ['UID','CATEGORY','QC_ID','I3QA_ID','FIX1_ID','FIX1_DATE','RV1_ID','RV1_LABEL','COMBO?'];
   const LABELS = {UID:'UID',CATEGORY:'Cat','QC_ID':'QC Tech','I3QA_ID':'i3QA Tech',
-    FIX1_ID:'Fix1 Tech',FIX1_DATE:'Fix1 Date',RV1_ID:'RV1 Tech',RV1_LABEL:'RV1 Label','COMBO?':'COMBO'};
+    I3QA_LABEL:'i3QA Label',FIX1_ID:'Fix1 Tech',FIX1_DATE:'Fix1 Date',
+    RV1_ID:'RV1 Tech',RV1_LABEL:'RV1 Label','COMBO?':'COMBO'};
 
   // header
   document.getElementById('dd-head').innerHTML =
@@ -3157,10 +3209,27 @@ function openDrillDown(techId, stat) {
     const ptsCellTitle = stat==='fix' && catVal!=null
       ? `Cat ${cat} × ${gsd} = ${catVal}${isIR?' × '+cs.irModifierValue+' (IR)':''}`
       : '';
-    return `<tr style="cursor:pointer" onclick="jumpToRow('${uid}')" title="Click to jump to this record in Tasks view">
+    // For missed rows: detect the miss label on this specific row
+    const missLabels = S.detect.triggers.miss.labels.map(l => l.toLowerCase());
+    const rowI3qaLabel = (r['I3QA_LABEL'] || r.i3qa_label || '').trim().toLowerCase();
+    const isMissRow = stat === 'missed' && missLabels.includes(rowI3qaLabel);
+    const rowBg = isMissRow ? 'background:#fef2f2;' : '';
+    return `<tr style="cursor:pointer;${rowBg}" onclick="jumpToRow('${uid}')" title="Click to jump to this record in Tasks view">
       ${COLS.map(c => {
         if (c==='COMBO?') return `<td style="text-align:center">${irTag}</td>`;
         if (c==='CATEGORY') return `<td><span class="cell-mono" style="font-size:0.7rem;font-weight:600;color:var(--accent)">${r[c]||'—'}</span></td>`;
+        // I3QA_LABEL in missed view: highlight the M label in red
+        if (c==='I3QA_LABEL') {
+          const lv = (r[c] || r.i3qa_label || '—').toString();
+          const isMissLabel = missLabels.includes(lv.trim().toLowerCase());
+          return `<td style="text-align:center"><span style="font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;${isMissLabel?'background:#fca5a5;color:#991b1b;':'color:var(--text-muted)'}">${lv}</span></td>`;
+        }
+        // QC_ID in missed view: highlight because this tech owns the penalty
+        if (c==='QC_ID' && stat === 'missed') {
+          const v = (r[c] || r.qc_id || '—').toString();
+          const isThisTech = v === techId;
+          return `<td><span class="cell-mono" title="${v}" style="font-size:0.7rem;font-weight:700;color:var(--red)">${v}</span></td>`;
+        }
         const v = (r[c]||'—').toString();
         const short = v.length>26 ? v.slice(0,24)+'…' : v;
         // Highlight if this cell is the tech being drilled
@@ -3182,11 +3251,17 @@ function openDrillDown(techId, stat) {
       </td>
     </tr>`;
   } else {
-    document.getElementById('dd-foot').innerHTML = `<tr style="background:#fef2f2;">
-      <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;color:var(--red);font-weight:600;">
-        ⚠ These ${unique.length} row${unique.length!==1?'s':''} reduce Quality % → hurts bonus payout
-      </td>
-    </tr>`;
+    document.getElementById('dd-foot').innerHTML = stat === 'missed'
+      ? `<tr style="background:#fef2f2;">
+          <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;color:var(--red);font-weight:600;">
+            ⚠ ${unique.length} Missed/Rework row${unique.length!==1?'s':''} — i3QA_LABEL matched miss labels (${S.detect.triggers.miss.labels.join(', ')}) — attributed to the <strong>QC Tech</strong> · reduces their Quality % &amp; bonus
+          </td>
+        </tr>`
+      : `<tr style="background:#fef2f2;">
+          <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;color:var(--red);font-weight:600;">
+            ⚠ These ${unique.length} row${unique.length!==1?'s':''} reduce Quality % → hurts bonus payout
+          </td>
+        </tr>`;
   }
 
   document.getElementById('dd-count').textContent =
@@ -3311,16 +3386,15 @@ function openAboutModal() {
 // ═══════════════════════════════════════════════════════════════
 // NEW PROJECT MODAL
 // ═══════════════════════════════════════════════════════════════
-let npPendingFile = null;
+let npPendingFiles = []; // array of File objects
 
 function openNewProjectModal() {
   // Reset form
   document.getElementById('np-name').value = '';
   document.getElementById('np-non-ir').checked = true;
   document.getElementById('np-ir-notice').style.display = 'none';
-  npResetDropzone();
+  npClearFiles();
   document.getElementById('np-error').style.display = 'none';
-  npPendingFile = null;
   // Reset chips to defaults
   document.querySelectorAll('[data-group="np-site"]').forEach(c => {
     c.classList.toggle('selected', c.dataset.val === 'Cebu');
@@ -3336,38 +3410,83 @@ function openNewProjectModal() {
   // Wire drag-and-drop on the dropzone
   const dz = document.getElementById('np-dropzone');
   dz.ondragover = e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; dz.style.background='#e8f4fd'; };
-  dz.ondragleave = () => { dz.style.borderColor='var(--border)'; dz.style.background='#f7f9fc'; };
+  dz.ondragleave = () => { npResetDropzone(); };
   dz.ondrop = e => {
     e.preventDefault();
-    dz.style.borderColor='var(--border)'; dz.style.background='#f7f9fc';
-    const f = e.dataTransfer.files[0];
-    if (f) npSetFile(f);
+    npResetDropzone();
+    const files = Array.from(e.dataTransfer.files).filter(f => /\.(dbf|zip)$/i.test(f.name));
+    if (files.length) files.forEach(npAddFile);
+    else toast('Drop .dbf or .zip files only');
   };
 }
 
 function npResetDropzone() {
   document.getElementById('np-dz-icon').textContent = '📂';
-  document.getElementById('np-dz-text').textContent = 'Drop .dbf or .zip here';
-  document.getElementById('np-dz-sub').textContent  = 'or click to browse';
+  document.getElementById('np-dz-text').textContent = 'Drop .dbf / .zip files here';
+  document.getElementById('np-dz-sub').textContent  = 'or click to browse — multiple files supported';
   const dz = document.getElementById('np-dropzone');
   dz.style.borderColor = 'var(--border)';
   dz.style.background  = '#f7f9fc';
 }
 
-function npSetFile(file) {
-  npPendingFile = file;
-  document.getElementById('np-dz-icon').textContent = '✅';
-  document.getElementById('np-dz-text').textContent = file.name;
-  document.getElementById('np-dz-sub').textContent  = (file.size/1024).toFixed(1) + ' KB — click to change';
-  document.getElementById('np-dropzone').style.borderColor = 'var(--green)';
-  document.getElementById('np-dropzone').style.background  = '#f0fdf4';
-  // Auto-fill project name from filename if blank
-  const nameInput = document.getElementById('np-name');
-  if (!nameInput.value.trim()) nameInput.value = file.name.replace(/\.(zip|dbf)$/i,'');
+function npClearFiles() {
+  npPendingFiles = [];
+  npResetDropzone();
+  document.getElementById('np-file-list').style.display = 'none';
+  document.getElementById('np-file-items').innerHTML = '';
+  document.getElementById('np-file-count').textContent = '0 files';
+  // reset the file input so same files can be re-selected
+  const inp = document.getElementById('np-file-input');
+  if (inp) inp.value = '';
+}
+
+function npAddFile(file) {
+  // Avoid exact duplicates (same name + size)
+  if (npPendingFiles.some(f => f.name === file.name && f.size === file.size)) return;
+  npPendingFiles.push(file);
+  npUpdateFileList();
+}
+
+function npUpdateFileList() {
+  const list = document.getElementById('np-file-list');
+  const items = document.getElementById('np-file-items');
+  const count = npPendingFiles.length;
+
+  document.getElementById('np-file-count').textContent = `${count} file${count !== 1 ? 's' : ''}`;
+  list.style.display = count > 0 ? 'block' : 'none';
+
+  items.innerHTML = npPendingFiles.map((f, i) => `
+    <li style="display:flex;align-items:center;gap:8px;padding:5px 10px;font-size:0.78rem;border-bottom:1px solid var(--border-light);">
+      <span style="font-size:1rem;">📄</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">${f.name}</span>
+      <span style="color:var(--text-muted);font-size:0.72rem;white-space:nowrap;">${(f.size/1024).toFixed(1)} KB</span>
+      <button onclick="npRemoveFile(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:0.78rem;padding:0 2px;line-height:1;" title="Remove">✕</button>
+    </li>`).join('');
+
+  // Update the dropzone indicator
+  if (count > 0) {
+    document.getElementById('np-dz-icon').textContent = '✅';
+    document.getElementById('np-dz-text').textContent = `${count} file${count !== 1 ? 's' : ''} selected`;
+    document.getElementById('np-dz-sub').textContent = 'Drop more or click to add more files';
+    document.getElementById('np-dropzone').style.borderColor = 'var(--green)';
+    document.getElementById('np-dropzone').style.background  = '#f0fdf4';
+    // Auto-fill project name from first filename if blank
+    const nameInput = document.getElementById('np-name');
+    if (!nameInput.value.trim()) nameInput.value = npPendingFiles[0].name.replace(/\.(zip|dbf)$/i,'');
+  } else {
+    npResetDropzone();
+  }
+}
+
+function npRemoveFile(index) {
+  npPendingFiles.splice(index, 1);
+  npUpdateFileList();
 }
 
 function npFileChosen(input) {
-  if (input.files[0]) npSetFile(input.files[0]);
+  Array.from(input.files).forEach(npAddFile);
+  // Reset input so the same file can be added again if needed after clearing
+  input.value = '';
 }
 
 function npBlocktypeChange() {
@@ -3384,7 +3503,7 @@ async function confirmNewProject() {
   errEl.style.display = 'none';
 
   if (!name) { errEl.textContent = 'Please enter a project name.'; errEl.style.display = 'block'; return; }
-  if (!npPendingFile) { errEl.textContent = 'Please choose a DBF or ZIP file.'; errEl.style.display = 'block'; return; }
+  if (!npPendingFiles.length) { errEl.textContent = 'Please choose at least one DBF or ZIP file.'; errEl.style.display = 'block'; return; }
 
   const blocktype = document.getElementById('np-ir').checked ? 'IR' : 'NON';
   const site = document.querySelector('[data-group="np-site"].selected')?.dataset.val || 'Cebu';
@@ -3397,29 +3516,65 @@ async function confirmNewProject() {
   currentProjectName = name;
 
   closeModal('new-project-modal');
+  showLoading(`Parsing ${npPendingFiles.length} file${npPendingFiles.length > 1 ? 's' : ''}…`);
 
-  const reader = new FileReader();
-  reader.onload = async e => {
-    const buf = e.target.result;
-    let dbfBuffer = buf;
-    // If ZIP, extract the first .dbf
-    if (npPendingFile.name.toLowerCase().endsWith('.zip')) {
-      try {
+  try {
+    // Parse all files and collect dbfBuffers
+    const dbfBuffers = [];
+    for (const file of npPendingFiles) {
+      const buf = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = () => rej(new Error('Failed to read ' + file.name));
+        r.readAsArrayBuffer(file);
+      });
+
+      if (file.name.toLowerCase().endsWith('.zip')) {
         const zip = await JSZip.loadAsync(buf);
-        const dbfEntry = Object.values(zip.files).find(f => f.name.toLowerCase().endsWith('.dbf'));
-        if (!dbfEntry) { toast('No .dbf found in ZIP'); return; }
-        dbfBuffer = await dbfEntry.async('arraybuffer');
-      } catch(ex) { toast('Error reading ZIP: ' + ex.message); return; }
+        const dbfEntries = Object.values(zip.files).filter(f => f.name.toLowerCase().endsWith('.dbf'));
+        if (!dbfEntries.length) { toast(`No .dbf found in ${file.name}`); continue; }
+        for (const entry of dbfEntries) {
+          dbfBuffers.push({ buffer: await entry.async('arraybuffer'), label: entry.name });
+        }
+      } else {
+        dbfBuffers.push({ buffer: buf, label: file.name });
+      }
     }
-    await loadBuffer(dbfBuffer, name);
-    // Auto-save to IndexedDB
-    const project = { name, createdAt: Date.now(), rowCount: allRows.length,
+
+    if (!dbfBuffers.length) { hideLoading(); toast('No valid DBF data found in the selected files.'); return; }
+
+    // Parse each buffer and merge rows
+    let mergedRows = [];
+    for (const { buffer, label } of dbfBuffers) {
+      document.getElementById('loading-msg').textContent = `Parsing ${label}…`;
+      await new Promise(r => setTimeout(r, 20));
+      const rows = parseDbf(buffer);
+      mergedRows = mergedRows.concat(rows);
+    }
+
+    document.getElementById('loading-msg').textContent = `Merging ${mergedRows.length.toLocaleString()} records…`;
+    await new Promise(r => setTimeout(r, 20));
+
+    // Load the merged rows (loadParsedRows handles hideLoading + toast)
+    await loadParsedRows(mergedRows, name, dbfBuffers.length);
+
+    // Save to IndexedDB — store the first raw buffer as reference; all rows merged
+    const firstBuffer = dbfBuffers[0].buffer;
+    const project = {
+      name, createdAt: Date.now(), rowCount: allRows.length,
       rows: allRows.map(r => ({...r, _raw: r._raw||{}})),
-      rawBuffer: dbfBuffer, importSettings: {...importSettings} };
-    try { await dbSave(project); await refreshProjectList(); toast(`✓ Created & saved "${name}"`); }
+      rawBuffer: firstBuffer,
+      importSettings: {...importSettings},
+      sourceFiles: npPendingFiles.map(f => f.name) // metadata
+    };
+    try { await dbSave(project); await refreshProjectList(); toast(`✓ Created & saved "${name}" (${mergedRows.length} records from ${dbfBuffers.length} file${dbfBuffers.length > 1 ? 's' : ''})`); }
     catch(ex) { console.error(ex); }
-  };
-  reader.readAsArrayBuffer(npPendingFile);
+
+  } catch(ex) {
+    hideLoading();
+    toast('Error: ' + ex.message);
+    console.error(ex);
+  }
 }
 
 
