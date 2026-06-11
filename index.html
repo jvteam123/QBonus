@@ -1104,6 +1104,40 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
   </div>
 </div>
 
+<!-- ══════════════ ROW DETAIL MODAL (eye icon on Tasks table) ══════════════ -->
+<div class="modal-backdrop" id="row-detail-modal" onclick="if(event.target===this)closeModal('row-detail-modal')">
+  <div class="modal modal-md" style="max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <h3>📋 Row Detail &amp; Points Breakdown</h3>
+        <div id="rd-uid" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;font-family:'JetBrains Mono',monospace;"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('row-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="rd-body" style="flex:1;overflow-y:auto;padding:16px 24px;"></div>
+    <div class="modal-footer" style="flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="closeModal('row-detail-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TECH DETAIL MODAL (eye icon on Tech Summary table) ══════════════ -->
+<div class="modal-backdrop" id="tech-detail-modal" onclick="if(event.target===this)closeModal('tech-detail-modal')">
+  <div class="modal" style="max-width:700px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <h3 id="td-title">👤 Tech Calculation Detail</h3>
+        <div id="td-subtitle" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('tech-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="td-body" style="flex:1;overflow-y:auto;padding:16px 24px;"></div>
+    <div class="modal-footer" style="flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="closeModal('tech-detail-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ ABOUT / FORMULA MODAL ══════════════ -->
 <div class="modal-backdrop" id="about-modal" onclick="if(event.target===this)closeModal('about-modal')">
   <div class="modal" style="max-width:820px;max-height:92vh;display:flex;flex-direction:column;">
@@ -2182,7 +2216,7 @@ function renderTable(){
     const irTag=r.ir==='IR'?'<span style="color:var(--amber);font-weight:700;font-size:0.7rem;background:var(--amber-bg);padding:1px 5px;border-radius:3px;">IR</span>':r.ir==='COMBO'?'<span style="color:var(--purple);font-weight:700;font-size:0.7rem;background:var(--purple-bg);padding:1px 5px;border-radius:3px;">COMBO</span>':'—';
     const uidShort=r.uid.length>32?r.uid.slice(0,30)+'…':r.uid;
     return `<tr>
-      <td><button class="eye-btn" title="Details">👁</button></td>
+      <td><button class="eye-btn" title="Row Detail" onclick="openRowDetail('${r.uid}')">👁</button></td>
       <td><span class="cell-mono" title="${r.uid}">${uidShort}</span></td>
       <td style="text-align:center;font-weight:700">${r.category||'—'}</td>
       <td style="text-align:center">${irTag}</td>
@@ -2225,7 +2259,7 @@ function renderTechTable(){
     const bg=TEAM_COLORS[t.teamNum]||'transparent';
     const dd=(stat,val)=>val>0?`<span class="cell-link" style="cursor:pointer;font-weight:700;" onclick="openDrillDown('${t.id}','${stat}')">${val}</span>`:`<span style="color:var(--text-light)">0</span>`;
     return `<tr>
-      <td><button class="eye-btn">👁</button></td>
+      <td><button class="eye-btn" onclick="openTechDetail('${t.id}')">👁</button></td>
       <td><span class="cell-link" style="font-size:0.72rem">${t.month}</span></td>
       <td><span class="cell-link cell-mono">${t.id}</span></td>
       <td>${t.name}</td>
@@ -4052,6 +4086,263 @@ async function confirmNewProject() {
   if (npMonth) { for (let o of npMonth.options) o.selected = (o.value === mo || o.text === mo); }
   if (npYear)  { npYear.value = yr; }
 })();
+
+// ═══════════════════════════════════════════════════════════════
+// ROW DETAIL MODAL  — eye icon on Tasks table
+// ═══════════════════════════════════════════════════════════════
+function openRowDetail(uid) {
+  const row = allRows.find(r => r.uid === uid);
+  if (!row) { toast('Row not found'); return; }
+  const raw = row._raw || {};
+  const cs  = S.calcSettings;
+  const isIR = importSettings.blocktype === 'IR';
+  const gsd  = importSettings.gsd || '6in';
+  const irM  = isIR ? cs.irModifierValue : 1.0;
+  const cat  = parseInt(row.category || 0);
+  const catVal = getCatGsdValue(cat, gsd);
+
+  // ── compute per-task contributions ──────────────────────────
+  const lines = [];
+  let total = 0;
+
+  const tag = (label, techId, pts, note) => {
+    const techName = techId ? (TECH_ROSTER[techId]?.name || techId) : '—';
+    lines.push({ label, techId: techId || '—', techName, pts, note: note || '' });
+    total += pts;
+  };
+
+  // QC
+  if (row.qc_id) tag('Initial Tag (QC)', row.qc_id, cs.points.qc, `${cs.points.qc} pts flat`);
+
+  // i3QA
+  if (row.i3qa_id) tag('i3QA Review', row.i3qa_id, cs.points.i3qa, `1/12 ≈ ${cs.points.i3qa.toFixed(6)} pts`);
+
+  // Fix rounds
+  const fixCatCols = [null,'CATEGORY','RV1_CAT','RV2_CAT','RV3_CAT','CATEGORY'];
+  for (let i = 1; i <= 5; i++) {
+    const fid = (raw[`FIX${i}_ID`] || '').trim().toUpperCase();
+    if (!fid) continue;
+    const roundCat = parseInt(raw[fixCatCols[i]] || raw['CATEGORY'] || 0);
+    const rVal = getCatGsdValue(roundCat, gsd);
+    const pts  = rVal * irM;
+    const irNote = isIR ? ` × ${cs.irModifierValue} IR` : '';
+    tag(`Fix Round ${i}`, fid, pts, `Cat ${roundCat} [${gsd}] = ${rVal}${irNote} = ${pts.toFixed(4)}`);
+  }
+
+  // RV1
+  const rv1id = (raw['RV1_ID'] || '').trim().toUpperCase();
+  if (rv1id) {
+    const pts = isIR ? cs.points.rv1_combo : cs.points.rv1;
+    tag('RV1 Review', rv1id, pts, isIR ? `RV1 IR/COMBO = ${pts}` : `RV1 Non-IR = ${pts}`);
+  }
+  // RV2–RV4
+  for (let i = 2; i <= 4; i++) {
+    const rid = (raw[`RV${i}_ID`] || '').trim().toUpperCase();
+    if (rid) tag(`RV${i} Review`, rid, cs.points.rv2, `RV2+ = ${cs.points.rv2} pts`);
+  }
+
+  // QC penalty transfer
+  const i3qaLabel = (raw['I3QA_LABEL'] || '').trim().toUpperCase();
+  const missLabelsUC = S.detect.triggers.miss.labels.map(l => l.toUpperCase());
+  const penCols = S.detect.triggers.qcPenalty.columns;
+  const penLabels = S.detect.triggers.qcPenalty.labels;
+  const isPenalty = penCols.some(c => {
+    const v = (raw[c.toUpperCase()] || '').trim().toLowerCase();
+    return v && penLabels.includes(v);
+  });
+  if (isPenalty && row.qc_id) {
+    tag('QC Penalty (deduct)', row.qc_id, -cs.points.qc, `−${cs.points.qc} pts from QC tech`);
+    if (row.i3qa_id) tag('QC→i3QA Transfer', row.i3qa_id, cs.points.qc, `+${cs.points.qc} pts to i3QA tech`);
+  }
+
+  // ── render ──────────────────────────────────────────────────
+  const irBadge = row.ir === 'IR'
+    ? `<span style="background:var(--amber);color:#fff;border-radius:4px;padding:2px 8px;font-size:0.7rem;font-weight:700;">IR</span>`
+    : row.ir === 'COMBO'
+    ? `<span style="background:var(--purple);color:#fff;border-radius:4px;padding:2px 8px;font-size:0.7rem;font-weight:700;">COMBO</span>`
+    : `<span style="background:var(--border);color:var(--text-muted);border-radius:4px;padding:2px 8px;font-size:0.7rem;">Non-IR</span>`;
+
+  const metaGrid = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:0.78rem;">
+      <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
+        <div style="color:var(--text-muted);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Record Info</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div><span style="color:var(--text-muted)">Category:</span> <b style="color:var(--accent)">${row.category || '—'}</b></div>
+          <div><span style="color:var(--text-muted)">Type:</span> ${irBadge}</div>
+          <div><span style="color:var(--text-muted)">GSD:</span> <b>${gsd}</b></div>
+          <div><span style="color:var(--text-muted)">Site:</span> <b>${importSettings.site || '—'}</b></div>
+          <div><span style="color:var(--text-muted)">Fix Date:</span> <b>${row.fix1_date || '—'}</b></div>
+          <div><span style="color:var(--text-muted)">Fixed1?:</span> <b style="color:${(raw['FIXED1?']||'').toUpperCase()==='N'?'var(--red)':'var(--green)'}">${raw['FIXED1?'] || '—'}</b></div>
+          <div><span style="color:var(--text-muted)">i3QA Label:</span> <b style="color:${missLabelsUC.includes(i3qaLabel)?'var(--red)':'var(--text)'}">${row.i3qa_label || '—'}</b></div>
+          <div><span style="color:var(--text-muted)">RV1 Label:</span> <b>${row.rv1_label || '—'}</b></div>
+          <div><span style="color:var(--text-muted)">Refixes:</span> <b style="color:${row.zfix_count>0?'var(--red)':'var(--text)'}">${row.zfix_count}</b></div>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;border:1px solid var(--border);">
+        <div style="color:var(--text-muted);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Cat ${cat} Point Value</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          ${[1,2,3,4,5,6,7,8,9].map(c=>{
+            const v = getCatGsdValue(c, gsd);
+            return `<div style="${c===cat?'font-weight:700;color:var(--accent);':'color:var(--text-muted);'}">
+              Cat ${c}: <span style="font-family:'JetBrains Mono',monospace">${v}</span>${c===cat?' ← this row':''}
+              ${c===cat&&isIR?`<span style="color:var(--amber)"> × ${cs.irModifierValue} = ${(v*irM).toFixed(4)}</span>`:''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+
+  const tableRows = lines.map((l, i) => {
+    const bg = i % 2 === 0 ? '' : 'background:var(--surface2);';
+    const ptsColor = l.pts < 0 ? 'color:var(--red)' : l.pts > 0 ? 'color:var(--accent)' : 'color:var(--text-muted)';
+    return `<tr style="${bg}">
+      <td style="padding:8px 10px;font-size:0.76rem;color:var(--text-muted);font-weight:600;white-space:nowrap;">${l.label}</td>
+      <td style="padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--green);font-weight:700;">${l.techId}</td>
+      <td style="padding:8px 10px;font-size:0.76rem;">${l.techName}</td>
+      <td style="padding:8px 10px;font-size:0.72rem;color:var(--text-muted);">${l.note}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.82rem;${ptsColor}">${l.pts >= 0 ? '+' : ''}${l.pts.toFixed(4)}</td>
+    </tr>`;
+  }).join('');
+
+  const totalColor = total > 0 ? 'var(--green)' : total < 0 ? 'var(--red)' : 'var(--text-muted)';
+
+  document.getElementById('rd-uid').textContent = `UID: ${uid}`;
+  document.getElementById('rd-body').innerHTML = `
+    ${metaGrid}
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Point Attribution — who earns what from this row</div>
+    <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border);">
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead>
+          <tr style="background:var(--header-bg);color:var(--header-text);">
+            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Task</th>
+            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Tech ID</th>
+            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Name</th>
+            <th style="padding:8px 10px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Formula</th>
+            <th style="padding:8px 10px;text-align:right;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Points</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+        <tfoot>
+          <tr style="background:var(--surface2);border-top:2px solid var(--border);">
+            <td colspan="4" style="padding:9px 10px;font-weight:700;font-size:0.78rem;">Total points distributed from this row</td>
+            <td style="padding:9px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;color:${totalColor}">${total.toFixed(4)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div style="margin-top:10px;font-size:0.71rem;color:var(--text-muted);padding:8px 12px;background:var(--blue-light);border-radius:6px;border-left:3px solid var(--accent);">
+      ℹ Points shown are distributed to individual techs — QC, i3QA, Fix, and RV techs each earn their own share from this single row.
+    </div>`;
+  document.getElementById('row-detail-modal').classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TECH DETAIL MODAL  — eye icon on Tech Summary table
+// ═══════════════════════════════════════════════════════════════
+function openTechDetail(techId) {
+  const tech = techRows.find(t => t.id === techId);
+  if (!tech) { toast('Tech not found'); return; }
+
+  const cs  = S.calcSettings;
+  const isIR = importSettings.blocktype === 'IR';
+  const gsd  = importSettings.gsd || '6in';
+  const mult = tech.bonusMultiplier || currentBonusMultiplier;
+  const qp   = tech.qp || 0;
+  const qualMod = tech.qualityPctMod || 0;
+  const threshApplied = tech.thresholdApplied || false;
+  const baseBonus = tech.baseBonus || 0;
+  const totalBonus = tech.totalBonus || 0;
+  const qpColor = qp >= 95 ? 'var(--green)' : qp >= 85 ? 'var(--amber)' : 'var(--red)';
+
+  // ── Points breakdown by task type ────────────────────────────
+  const qcPts    = tech.initial * cs.points.qc;
+  const i3qaPts  = tech.i3qa * cs.points.i3qa;
+  const rvPts    = tech.rv > 0
+    ? (tech._src?.rv?.length
+        ? tech._src.rv.reduce((s, r) => {
+            const rid = (r._raw?.RV1_ID || '').trim().toUpperCase();
+            return s + (rid === techId
+              ? (isIR ? cs.points.rv1_combo : cs.points.rv1)
+              : cs.points.rv2);
+          }, 0)
+        : tech.rv * (isIR ? cs.points.rv1_combo : cs.points.rv1))
+    : 0;
+
+  // ── Quality tier lookup explanation ──────────────────────────
+  const nearTiers = S.bonusTiers.filter(t => Math.abs(t.quality - qp) < 5).slice(0, 5);
+  const activeTier = S.bonusTiers.find(t => qp >= t.quality);
+
+  // ── Sections ─────────────────────────────────────────────────
+  const pct = (n, total) => total > 0 ? ` (${(n/total*100).toFixed(1)}%)` : '';
+
+  const statRow = (label, val, color, note) =>
+    `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border-light);">
+      <span style="color:var(--text-muted);font-size:0.76rem;">${label}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${color||'var(--text)'};font-size:0.82rem;">${val}${note?`<span style="font-size:0.68rem;font-weight:400;color:var(--text-muted);margin-left:6px;">${note}</span>`:''}</span>
+    </div>`;
+
+  const section = (title, color, content) =>
+    `<div style="background:var(--surface2);border-radius:10px;padding:14px 16px;border:1px solid var(--border);margin-bottom:12px;">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${color};margin-bottom:10px;">${title}</div>
+      ${content}
+    </div>`;
+
+  // Task counts section
+  const taskContent = [
+    statRow('Initial Tags (QC)', tech.initial, 'var(--accent)', `× ${cs.points.qc} = ${qcPts.toFixed(4)} pts`),
+    statRow('i3QA Reviews', tech.i3qa, 'var(--accent)', `× ${cs.points.i3qa.toFixed(6)} ≈ ${i3qaPts.toFixed(4)} pts`),
+    statRow('Fix Tasks', tech.fix, 'var(--accent)', `Cat × GSD${isIR?` × ${cs.irModifierValue} IR`:''}  → see breakdown`),
+    statRow('RV Tasks', tech.rv, 'var(--accent)', `RV1=${isIR?cs.points.rv1_combo:cs.points.rv1} | RV2+=${cs.points.rv2}`),
+    statRow('Missed / Rework', tech.missed, tech.missed>0?'var(--red)':'var(--text-muted)', 'attributed to this QC tech'),
+    statRow('Refix', tech.refix, tech.refix>0?'var(--amber)':'var(--text-muted)', '→ lowers Fix Quality %'),
+    statRow('Warnings', tech.warn, tech.warn>0?'var(--amber)':'var(--text-muted)', '→ lowers Fix Quality %'),
+  ].join('');
+
+  // Quality % section
+  const denom = tech.fix + tech.refix + tech.warn;
+  const qualContent = [
+    statRow('Fix count', tech.fix, 'var(--green)'),
+    statRow('+ Refix count', tech.refix, tech.refix>0?'var(--red)':'var(--text-muted)'),
+    statRow('+ Warning count', tech.warn, tech.warn>0?'var(--red)':'var(--text-muted)'),
+    statRow('= Denominator', denom, 'var(--text)'),
+    `<div style="padding:6px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;">
+      <span style="color:var(--text-muted);font-size:0.76rem;">Fix Quality %  (Fix ÷ Denom)</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${qpColor};font-size:1rem;">${qp.toFixed(2)}%</span>
+    </div>`,
+    `<div style="padding:6px 0;display:flex;justify-content:space-between;align-items:center;">
+      <span style="color:var(--text-muted);font-size:0.76rem;">Bonus Earned % (from tier table)</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${threshApplied?'var(--green)':'var(--accent)'};font-size:0.9rem;">
+        ${qualMod}%${threshApplied?'  <span style="font-size:0.65rem;background:var(--green);color:#fff;border-radius:3px;padding:1px 5px;margin-left:4px;">★ Threshold</span>':''}
+      </span>
+    </div>`,
+  ].join('');
+
+  // Bonus calc section
+  const bonusContent = [
+    statRow('Total Points', tech.points.toFixed(4), 'var(--accent)'),
+    statRow('Bonus Earned %', `${qualMod}%`, threshApplied?'var(--green)':'var(--text)', threshApplied?'(threshold override)':''),
+    statRow('Base Bonus  (Points × Bonus%)', baseBonus.toFixed(4), 'var(--accent)'),
+    statRow('PHP Multiplier', mult.toFixed(2), 'var(--text-muted)'),
+    `<div style="padding:8px 0;border-top:2px solid var(--border);margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-weight:700;font-size:0.82rem;">Total Bonus  (Points × Mult × Bonus%)</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--green);font-size:1.05rem;">${totalBonus.toFixed(4)}</span>
+    </div>`,
+    `<div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);background:var(--blue-light);border-radius:6px;padding:7px 10px;border-left:3px solid var(--accent);">
+      Formula: <b style="font-family:'JetBrains Mono',monospace">${tech.points.toFixed(4)} × ${mult.toFixed(2)} × (${qualMod}/100) = ${totalBonus.toFixed(4)}</b>
+    </div>`,
+  ].join('');
+
+  document.getElementById('td-title').textContent = `👤 ${tech.name || techId}  (${techId})`;
+  document.getElementById('td-subtitle').textContent =
+    `${tech.team || '—'}  ·  ${tech.teamNum || '—'}  ·  ${tech.month || ''}  ·  GSD: ${gsd}  ·  ${isIR ? 'IR' : 'Non-IR'}`;
+
+  document.getElementById('td-body').innerHTML =
+    section('① Task Counts & Raw Point Contributions', 'var(--accent)', taskContent) +
+    section('② Fix Quality % Calculation', qpColor, qualContent) +
+    section('③ Bonus Payout Calculation', 'var(--green)', bonusContent);
+
+  document.getElementById('tech-detail-modal').classList.add('show');
+}
 
 openDB().then(refreshProjectList).catch(console.error);
 </script>
