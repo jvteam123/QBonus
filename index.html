@@ -1268,15 +1268,15 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <div style="background:var(--amber-bg);border-left:4px solid var(--amber);border-radius:6px;padding:10px 14px;font-size:0.76rem;">
             <div style="font-weight:700;color:var(--amber);margin-bottom:5px;">Who gets deducted?</div>
-            <div style="color:var(--text);line-height:1.7;">The <b>i3QA Tech (I3QA_ID)</b> on each missed egregious row receives the DRQ-level deduction.<br>Only rows where <b>FIXED1? = "N"</b> (not yet fixed) are counted toward the DRQ threshold.</div>
+            <div style="color:var(--text);line-height:1.7;">The <b>i3QA Tech (I3QA_ID)</b> on each missed egregious row receives the DRQ-level deduction.<br>Rows where <b>FIXED1? = "N"</b> (not yet fixed) <b>or</b> <b>AFP1_STAT = "AA"</b> are counted toward the DRQ threshold.</div>
           </div>
           <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:0.76rem;">
-            <div style="font-weight:700;color:var(--text);margin-bottom:5px;">FIXED1? = N condition</div>
-            <div style="color:var(--text-muted);line-height:1.7;">If the QC Tech has already fixed the row (<b>FIXED1? ≠ N</b>), it is <b>excluded</b> from the DRQ egregious count.<br>Only <b>unfixed</b> egregious rows count toward DRQ — fixed rows are exempt.</div>
+            <div style="font-weight:700;color:var(--text);margin-bottom:5px;">DRQ Trigger Conditions</div>
+            <div style="color:var(--text-muted);line-height:1.7;">An egregious row is counted toward DRQ if <b>FIXED1? = "N"</b> (unfixed) <b>or AFP1_STAT = "AA"</b> (RQA-approved).<br>Rows that meet neither condition are excluded from the DRQ count.</div>
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">
-          <b>Egregious Categories: Cat 1, 2, 3</b> &nbsp;·&nbsp; DRQ count = egregious rows where <b style="color:var(--amber);">FIXED1? = "N"</b> only &nbsp;·&nbsp; per project cut-off
+          <b>Egregious Categories: Cat 1, 2, 3</b> &nbsp;·&nbsp; DRQ count = egregious rows where <b style="color:var(--amber);">FIXED1? = "N"</b> or <b style="color:var(--amber);">AFP1_STAT = "AA"</b> &nbsp;·&nbsp; per project cut-off
         </div>
         <div style="overflow-x:auto;">
           <table style="border-collapse:collapse;font-size:0.78rem;width:100%;">
@@ -1330,12 +1330,12 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
               <div>+ (i3QA task rows × 1/12)</div>
               <div style="color:var(--green);">+ (QC miss rows × 0.125)  ← QC Transfer</div>
               <div style="border-top:1px dashed var(--border);margin-top:4px;padding-top:4px;">= <b>Base fixpoints</b></div>
-              <div style="color:var(--red);">− i3QA DRQ Penalty (if FIXED1=N egregious ≥ threshold)</div>
+              <div style="color:var(--red);">− i3QA DRQ Penalty (if FIXED1=N or AFP1=AA egregious ≥ threshold)</div>
               <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px;font-weight:700;">= <b>Final Points</b></div>
             </div>
             <div style="margin-top:8px;font-size:0.7rem;color:var(--text-muted);line-height:1.6;">
-              <b>DRQ Penalty</b> only counts egregious rows where <b>FIXED1? = "N"</b>.<br>
-              Fixed rows (FIXED1? ≠ N) are excluded from the DRQ threshold count.
+              <b>DRQ Penalty</b> counts egregious rows where <b>FIXED1? = "N"</b> or <b>AFP1_STAT = "AA"</b>.<br>
+              Rows meeting neither condition are excluded from the DRQ threshold count.
             </div>
           </div>
 
@@ -1348,7 +1348,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <div style="background:var(--accent);color:#fff;padding:8px 6px;border-radius:6px 0 0 6px;font-weight:700;">① Initial Tagging<br><span style="font-weight:400;font-size:0.67rem;">QC_ID rows × 0.125</span></div>
             <div style="background:var(--red);color:#fff;padding:8px 6px;font-weight:700;">② QC Miss Penalty<br><span style="font-weight:400;font-size:0.67rem;">−0.125 per miss row<br>from QC Tech</span></div>
             <div style="background:var(--green);color:#fff;padding:8px 6px;font-weight:700;">③ QC Transfer<br><span style="font-weight:400;font-size:0.67rem;">+0.125 per miss row<br>to i3QA Tech</span></div>
-            <div style="background:#7c3aed;color:#fff;padding:8px 6px;font-weight:700;">④ DR / DRQ Level<br><span style="font-weight:400;font-size:0.67rem;">DR = all egregious<br>DRQ = FIXED1=N only</span></div>
+            <div style="background:#7c3aed;color:#fff;padding:8px 6px;font-weight:700;">④ DR / DRQ Level<br><span style="font-weight:400;font-size:0.67rem;">DR = all egregious<br>DRQ = FIXED1=N or AFP1=AA</span></div>
             <div style="background:var(--navy);color:#fff;padding:8px 6px;border-radius:0 6px 6px 0;font-weight:700;">⑤ Final Points<br><span style="font-weight:400;font-size:0.67rem;">Base + Penalties<br>= Payout basis</span></div>
           </div>
           <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.71rem;color:var(--text-muted);">
@@ -1358,7 +1358,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             </div>
             <div style="line-height:1.7;"><b style="color:var(--text);">DRQ (i3QA Penalty)</b> — attributed to i3QA Tech<br>
               Threshold: 10→DRQ1(−30), 20→DRQ2(−50), 50→DRQ3(−100), 100→DRQ4(−200), 200→DRQ5(−500)<br>
-              Basis: only egregious rows where <b style="color:var(--amber);">FIXED1? = "N"</b>
+              Basis: only egregious rows where <b style="color:var(--amber);">FIXED1? = "N"</b> or <b style="color:var(--amber);">AFP1_STAT = "AA"</b>
             </div>
           </div>
         </div>
@@ -1458,7 +1458,7 @@ const PDF_DEFAULTS = {
     taskColumns: { qc:['qc_id'], i3qa:['i3qa_id'], rv1:['rv1_id'], rv2:['rv2_id'] },
     triggers: {
       refix:     { labels:['i','s'],                   columns:['rv1_label','rv2_label','rv3_label'] },
-      miss:      { labels:['m','c'],                   columns:['i3qa_label','rv1_label','rv2_label','rv3_label'] },
+      miss:      { labels:['m','d'],                   columns:['i3qa_label','rv1_label','rv2_label','rv3_label'] },
       warning:   { labels:['b','c','d','e','f','g','i'],columns:['r1_warn','r2_warn','r3_warn','r4_warn'] },
       qcPenalty: { labels:['m','e'],                   columns:['i3qa_label'] },
     },
@@ -3377,7 +3377,7 @@ function openDrillDown(techId, stat) {
       [`QC Penalty`, `Each miss row deducts −${cs.points.qc} pts from QC Tech fixpoints total`],
       [`QC Transfer`, `Those −${cs.points.qc} pts are given to i3QA Tech (I3QA_ID) as a bonus`],
       [`i3 DR Penalty`, `If egregious (Cat 1,2,3) count hits threshold → additional DR-level deduction from QC Tech`],
-      [`i3QA DRQ Penalty`, `DRQ counts only egregious rows where FIXED1? = "N" — fixed rows are excluded`],
+      [`i3QA DRQ Penalty`, `DRQ counts egregious rows where FIXED1? = "N" or AFP1_STAT = "AA"`],
       [`Total here`, `${rows.length} missed row${rows.length!==1?'s':''} — see footer for full penalty breakdown`],
     ],
     refix: [
@@ -3621,10 +3621,11 @@ function openDrillDown(techId, stat) {
     const totalCount = unique.length;
     const nonEgCount = totalCount - eCount;
 
-    // DRQ only counts egregious rows where FIXED1? = "N" (not yet fixed)
+    // DRQ counts egregious rows where FIXED1? = "N" OR AFP1_STAT = "AA"
     const drqEgregiousRows = egregiousRows.filter(r => {
-      const f = (r['FIXED1?'] || '').toString().trim().toUpperCase();
-      return f === 'N';
+      const f    = (r['FIXED1?']   || r['FIXED1']   || '').toString().trim().toUpperCase();
+      const afp1 = (r['AFP1_STAT'] || r['afp1_stat'] || '').toString().trim().toUpperCase();
+      return f === 'N' || afp1 === 'AA';
     });
     const drqECount = drqEgregiousRows.length;
     const drqFixedExcluded = eCount - drqECount;
@@ -3654,8 +3655,8 @@ function openDrillDown(techId, stat) {
                 <div><span style="color:var(--text-muted);">Total missed rows:</span> <b style="color:var(--text)">${totalCount}</b></div>
                 <div><span style="color:var(--red);font-weight:600;">Egregious (Cat 1,2,3):</span> <b style="color:var(--red);font-size:1rem;">${eCount}</b></div>
                 <div style="margin-left:10px;display:flex;flex-direction:column;gap:2px;">
-                  <div><span style="color:var(--text-muted);font-size:0.72rem;">↳ FIXED1=N (unfixed):</span> <b style="color:var(--red);font-size:0.82rem;">${drqECount}</b> <span style="color:var(--text-muted);font-size:0.68rem;">← used for DRQ</span></div>
-                  ${drqFixedExcluded > 0 ? `<div><span style="color:var(--text-muted);font-size:0.72rem;">↳ FIXED1≠N (fixed/blank):</span> <b style="color:var(--green);font-size:0.82rem;">${drqFixedExcluded}</b> <span style="color:var(--text-muted);font-size:0.68rem;">← excluded from DRQ</span></div>` : ""}
+                  <div><span style="color:var(--text-muted);font-size:0.72rem;">↳ FIXED1=N or AFP1=AA:</span> <b style="color:var(--red);font-size:0.82rem;">${drqECount}</b> <span style="color:var(--text-muted);font-size:0.68rem;">← used for DRQ</span></div>
+                  ${drqFixedExcluded > 0 ? `<div><span style="color:var(--text-muted);font-size:0.72rem;">↳ Neither (excluded):</span> <b style="color:var(--green);font-size:0.82rem;">${drqFixedExcluded}</b> <span style="color:var(--text-muted);font-size:0.68rem;">← excluded from DRQ</span></div>` : ""}
                 </div>
                 <div><span style="color:var(--text-muted);">Non-egregious:</span> <b style="color:var(--text-muted)">${nonEgCount}</b></div>
               </div>
@@ -3680,7 +3681,7 @@ function openDrillDown(techId, stat) {
                     ${drqRule ? `<span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${drqRule.deduct} pts</span>` : ''}
                     ${!drqRule && drqFixedExcluded > 0 ? `<span style="color:var(--green);font-size:0.7rem;">None — ${drqFixedExcluded} row${drqFixedExcluded!==1?'s':''} excluded (fixed)</span>` : ''}
                   </div>
-                  ${drqRule ? `<div style="margin-left:86px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:0.67rem;background:#78350f;color:#fcd34d;border-radius:3px;padding:2px 7px;font-weight:700;letter-spacing:0.04em;">⚠ DEDUCTED FROM i3QA TECH</span><span style="font-size:0.67rem;color:var(--text-muted);margin-top:1px;">Based on ${drqECount} unfixed egregious rows (FIXED1=N)</span></div>` : ''}
+                  ${drqRule ? `<div style="margin-left:86px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:0.67rem;background:#78350f;color:#fcd34d;border-radius:3px;padding:2px 7px;font-weight:700;letter-spacing:0.04em;">⚠ DEDUCTED FROM i3QA TECH</span><span style="font-size:0.67rem;color:var(--text-muted);margin-top:1px;">Based on ${drqECount} egregious rows (FIXED1=N or AFP1=AA)</span></div>` : ''}
                 </div>
               </div>
             </div>
@@ -3691,7 +3692,7 @@ function openDrillDown(techId, stat) {
               <div style="display:flex;flex-direction:column;gap:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;">
                 <div style="display:flex;justify-content:space-between;gap:24px;"><span style="color:var(--text-muted);">Base points:</span><span style="font-weight:600;color:var(--accent);">${techPts.toFixed(4)}</span></div>
                 ${drRule ? `<div style="display:flex;justify-content:space-between;gap:24px;"><span style="color:var(--red);font-size:0.74rem;">i3 Penalty (QC Tech):</span><span style="font-weight:700;color:var(--red);">${drRule.deduct} pts</span></div>` : ''}
-                ${drqRule ? `<div style="display:flex;justify-content:space-between;gap:24px;" title="${drqECount} unfixed egregious rows (FIXED1=N) → ${drqRule.level}"><span style="color:var(--red);font-size:0.74rem;">i3QA Penalty (${drqECount} unfixed):</span><span style="font-weight:700;color:var(--red);">${drqRule.deduct} pts</span></div>` : ''}
+                ${drqRule ? `<div style="display:flex;justify-content:space-between;gap:24px;" title="${drqECount} egregious rows (FIXED1=N or AFP1=AA) → ${drqRule.level}"><span style="color:var(--red);font-size:0.74rem;">i3QA Penalty (${drqECount} rows):</span><span style="font-weight:700;color:var(--red);">${drqRule.deduct} pts</span></div>` : ''}
                 ${totalDeduct < 0 ? `<div style="display:flex;justify-content:space-between;gap:24px;background:rgba(220,38,38,0.07);padding:3px 6px;border-radius:4px;margin-top:2px;"><span style="color:var(--red);font-weight:700;">Total deduction:</span><span style="font-weight:700;color:var(--red);">${totalDeduct} pts</span></div>` : ''}
                 <div style="display:flex;justify-content:space-between;gap:24px;border-top:2px solid var(--border);padding-top:5px;margin-top:3px;"><span style="color:var(--text);font-weight:700;">Final points:</span><span style="font-weight:700;font-size:0.9rem;color:${finalPts >= techPts ? 'var(--green)' : 'var(--red)'};">${finalPts.toFixed(4)}</span></div>
               </div>
