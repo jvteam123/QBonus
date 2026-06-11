@@ -488,14 +488,15 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
                 <th onclick="sortTech('i3qa')"># i3QA</th>
                 <th onclick="sortTech('rv')"># RV</th>
                 <th onclick="sortTech('fix')"># Fix</th>
-                <th onclick="sortTech('missed')"># Missed/<br>Rework</th>
+                <th onclick="sortTech('missed')"># I3 Missed/<br>Rework</th>
                 <th onclick="sortTech('refix')"># Refix</th>
                 <th onclick="sortTech('warn')"># Warn</th>
                 <th onclick="sortTech('points')">Total Points</th>
                 <th onclick="sortTech('qp')">Fix Quality %</th>
                 <th onclick="sortTech('qualityPctMod')">Quality<br>% Mod</th>
-                <th onclick="sortTech('bonusMultiplier')">Mult</th>
-                <th onclick="sortTech('totalBonus')">Payout</th>
+                <th onclick="sortTech('baseBonus')" style="background:#0e2a45;color:#7dd3fc;">Payout<br>w/o Mult</th>
+                <th onclick="sortTech('bonusMultiplier')" style="background:#0e2a45;color:#94a3b8;">Mult</th>
+                <th onclick="sortTech('totalBonus')" style="background:#0a2218;color:#6ee7b7;">Payout<br>w/ Mult</th>
               </tr>
             </thead>
             <tbody id="tech-body"></tbody>
@@ -540,9 +541,9 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <div class="stat-cell"><div class="sc-label"># i3QA</div><div class="sc-value" id="cas-i3qa">0</div></div>
             <div class="stat-cell"><div class="sc-label"># RV</div><div class="sc-value" id="cas-rv">0</div></div>
             <div class="stat-cell"><div class="sc-label"># Fix</div><div class="sc-value" id="cas-fix">0</div></div>
-            <div class="stat-cell amber"><div class="sc-label"># Missed/Rework</div><div class="sc-value" id="cas-missed">0</div></div>
+            <div class="stat-cell amber"><div class="sc-label"># I3 Missed/Rework</div><div class="sc-value" id="cas-missed">0</div></div>
             <div class="stat-cell red"><div class="sc-label"># Refix</div><div class="sc-value" id="cas-refix">0</div></div>
-            <div class="stat-cell"><div class="sc-label">Total Payout</div><div class="sc-value green" id="cas-bonus" style="font-size:0.9rem;">0</div></div>
+            <div class="stat-cell"><div class="sc-label">Total Payout (w/ Mult)</div><div class="sc-value green" id="cas-bonus" style="font-size:0.9rem;">0</div></div>
             <div class="stat-cell"><div class="sc-label">Projects</div><div class="sc-value" id="cas-projects">0</div></div>
           </div>
           <!-- Progress bar -->
@@ -567,14 +568,14 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
                   <th onclick="sortCalcAll('i3qa')"># i3QA</th>
                   <th onclick="sortCalcAll('rv')"># RV</th>
                   <th onclick="sortCalcAll('fix')"># Fix</th>
-                  <th onclick="sortCalcAll('missed')"># Missed/<br>Rework</th>
+                  <th onclick="sortCalcAll('missed')"># I3 Missed/<br>Rework</th>
                   <th onclick="sortCalcAll('refix')"># Refix</th>
                   <th onclick="sortCalcAll('warn')"># Warn</th>
                   <th onclick="sortCalcAll('points')">Total Points</th>
                   <th onclick="sortCalcAll('qp')">Fix Quality %</th>
                   <th onclick="sortCalcAll('qualityPctMod')">Quality<br>% Mod</th>
-                  <th onclick="sortCalcAll('bonusMult')">Mult</th>
-                  <th onclick="sortCalcAll('totalBonus')">Payout</th>
+                  <th onclick="sortCalcAll('baseBonus')" style="background:#0a2a1a;color:#6ee7b7;">Payout<br>w/o Mult</th>
+                  <th onclick="sortCalcAll('totalBonus')" style="background:#0a1f0a;color:#34d399;">Payout<br>w/ Mult ×<span id="ca-mult-label">9.50</span></th>
                   <th>Projects</th>
                 </tr>
               </thead>
@@ -1555,8 +1556,6 @@ function buildTechStats(rawRecords) {
         if (!isNaN(catValue) && catValue >= 1 && catValue <= 9) {
           techStats[techId].fixTasks++;
           techStats[techId]._src.fix.push(r);
-          // If this row was flagged with a miss label, count it as missed
-          if (source.condition && labelValue) { techStats[techId].missedTasks++; techStats[techId]._src.missed.push(r); }
           const pointValue = (cs.categoryValues[catValue]?.[gsd]) || 0;
           const pts = pointValue * (isComboIR ? cs.irModifierValue : 1);
           techStats[techId].points += pts;
@@ -1640,6 +1639,19 @@ function buildTechStats(rawRecords) {
 
     // ── QC task ──────────────────────────────────────────────
     det.taskColumns.qc.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.qc, 'qc', 'qc'));
+
+    // ── I3 Missed/Rework — attributed to QC tech when I3QA_LABEL is a miss label ──
+    {
+      const i3qaLabel = get('I3QA_LABEL').trim().toUpperCase();
+      const isMiss = det.missLabels.some(l => i3qaLabel.includes(l.toUpperCase()));
+      if (isMiss) {
+        const qcId = get('QC_ID').trim().toUpperCase();
+        if (qcId && techStats[qcId]) {
+          techStats[qcId].missedTasks++;
+          techStats[qcId]._src.missed.push(r);
+        }
+      }
+    }
 
     // ── i3QA task ────────────────────────────────────────────
     det.taskColumns.i3qa.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.i3qa, 'i3qa', 'i3qa'));
@@ -1908,9 +1920,11 @@ function buildTechSummary(rows) {
     t.bonusMultiplier = currentBonusMultiplier;
     if (threshBonus !== null) {
       t.thresholdApplied = true;
+      t.baseBonus = t.points * (threshBonus / 100);
       t.totalBonus = t.points * currentBonusMultiplier * (threshBonus / 100);
     } else {
       t.thresholdApplied = false;
+      t.baseBonus = t.points * (t.qualityPctMod/100);
       t.totalBonus = t.points * currentBonusMultiplier * (t.qualityPctMod/100);
     }
     return t;
@@ -1979,7 +1993,7 @@ const TEAM_COLORS={'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'
 
 function renderTechTable(){
   const tbody=document.getElementById('tech-body');
-  if(!filteredTech.length){tbody.innerHTML=`<tr><td colspan="18" class="empty-state"><p>No tech data.</p></td></tr>`;renderTechFoot([]);return;}
+  if(!filteredTech.length){tbody.innerHTML=`<tr><td colspan="19" class="empty-state"><p>No tech data.</p></td></tr>`;renderTechFoot([]);return;}
   tbody.innerHTML=filteredTech.map(t=>{
     const qpColor=t.qp>=95?'var(--green)':t.qp>=85?'var(--amber)':'var(--red)';
     const bonusColor=t.totalBonus>0?'var(--green)':'var(--text-muted)';
@@ -2003,8 +2017,9 @@ function renderTechTable(){
       <td class="cell-points">${t.points.toFixed(4)}</td>
       <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
-      <td class="cell-num" style="color:var(--accent)">${t.bonusMultiplier.toFixed(2)}</td>
-      <td class="cell-points" style="color:${bonusColor}">${t.totalBonus.toFixed(4)}</td>
+      <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.05)">${(t.baseBonus||0).toFixed(4)}</td>
+      <td class="cell-num" style="color:var(--text-muted)">${t.bonusMultiplier.toFixed(2)}</td>
+      <td class="cell-points" style="color:${bonusColor};background:rgba(5,150,105,0.06);font-weight:700">${t.totalBonus.toFixed(4)}</td>
     </tr>`;
   }).join('');
   renderTechFoot(filteredTech);
@@ -2024,8 +2039,10 @@ function renderTechFoot(rows){
     <td class="cell-num"><strong>${sum('refix')}</strong></td>
     <td class="cell-num"><strong>${sum('warn')}</strong></td>
     <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
-    <td colspan="3"></td>
-    <td class="cell-points" style="color:var(--green)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
+    <td colspan="2"></td>
+    <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.05)"><strong>${sum('baseBonus').toFixed(4)}</strong></td>
+    <td></td>
+    <td class="cell-points" style="color:var(--green);background:rgba(5,150,105,0.06)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
   </tr>`;
 }
 
@@ -2041,11 +2058,12 @@ function recalcBonus(){
     // bonusMultiplier (PHP) is always the same input value regardless of threshold
     t.bonusMultiplier = bonusMult;
     if (threshBonus !== null) {
-      // Threshold overrides the quality fraction used for payout, but the PHP multiplier stays fixed
       t.thresholdApplied = true;
+      t.baseBonus = t.points * (threshBonus / 100);
       t.totalBonus = t.points * bonusMult * (threshBonus / 100);
     } else {
       t.thresholdApplied = false;
+      t.baseBonus = t.points * qualityFrac;
       t.totalBonus = t.points * bonusMult * qualityFrac;
     }
   };
@@ -2830,6 +2848,9 @@ async function initCalcAllView(){
 
 async function runCalcAll(){
   const mult = Number(document.getElementById('ca-mult').value) || 9.5;
+  // Update the multiplier label in the header
+  const multLabel = document.getElementById('ca-mult-label');
+  if (multLabel) multLabel.textContent = mult.toFixed(2);
   const projects = await dbGetAll();
   if(!projects.length){ toast('No saved projects found'); return; }
 
@@ -2891,6 +2912,9 @@ async function runCalcAll(){
     c.qualityPctMod = Math.round(qualMod*100*100)/100;
     c.thresholdApplied = threshBonus !== null;
     c.bonusMult = mult;
+    c.baseBonus = threshBonus !== null
+      ? c.points * (threshBonus/100)
+      : c.points * qualMod;
     c.totalBonus = threshBonus !== null
       ? c.points * mult * (threshBonus/100)
       : c.points * mult * qualMod;
@@ -2933,7 +2957,7 @@ function applyCalcAllFilter(){
 function sortCalcAll(key){
   if(calcAllSortKey===key) calcAllSortDir*=-1; else { calcAllSortKey=key; calcAllSortDir=-1; }
   document.querySelectorAll('#ca-header-row th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));
-  const keys=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','bonusMult','totalBonus','projects'];
+  const keys=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus','projects'];
   const idx=keys.indexOf(key);
   const ths=document.querySelectorAll('#ca-header-row th');
   if(idx>=0&&ths[idx]) ths[idx].classList.add(calcAllSortDir===-1?'sort-desc':'sort-asc');
@@ -2986,8 +3010,8 @@ function renderCalcAllTable(data){
       <td class="cell-points">${t.points.toFixed(4)}</td>
       <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
-      <td class="cell-num" style="color:var(--accent)">${(t.bonusMult||0).toFixed(2)}</td>
-      <td class="cell-points" style="color:${bonusColor}">${t.totalBonus.toFixed(4)}</td>
+      <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.06)">${(t.baseBonus||0).toFixed(4)}</td>
+      <td class="cell-points" style="color:${bonusColor};background:rgba(5,150,105,0.08);font-weight:700">${t.totalBonus.toFixed(4)}</td>
       <td style="font-size:0.68rem;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(t.projects||[]).join(', ')}">${(t.projects||[]).join(', ')}</td>
     </tr>`;
   }).join('');
@@ -3004,15 +3028,16 @@ function renderCalcAllTable(data){
     <td class="cell-num"><strong>${sum('refix')}</strong></td>
     <td class="cell-num"><strong>${sum('warn')}</strong></td>
     <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
-    <td colspan="3"></td>
-    <td class="cell-points" style="color:var(--green)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
+    <td colspan="2"></td>
+    <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.06)"><strong>${sum('baseBonus').toFixed(4)}</strong></td>
+    <td class="cell-points" style="color:var(--green);background:rgba(5,150,105,0.08)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
     <td></td>
   </tr>`;
 }
 
 function exportCalcAllCSV(){
   if(!calcAllData.length){ toast('Run Calculate first'); return; }
-  const cols=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','totalBonus'];
+  const cols=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus'];
   const lines=[cols.join(',')];
   calcAllFiltered.forEach(t=>lines.push(cols.map(c=>`"${t[c]}"`).join(',')));
   const a=document.createElement('a');
@@ -3056,7 +3081,7 @@ document.getElementById('project-name-input').addEventListener('keydown',e=>{if(
 // ═══════════════════════════════════════════════════════════════
 const DD_STAT_LABELS = {
   initial: '# Initial Tagging', i3qa: '# i3QA', rv: '# RV',
-  fix: '# Fix', missed: '# Missed/Rework', refix: '# Refix', warn: '# Warn'
+  fix: '# Fix', missed: '# I3 Missed/Rework', refix: '# Refix', warn: '# Warn'
 };
 
 function openDrillDown(techId, stat) {
@@ -3132,9 +3157,9 @@ function openDrillDown(techId, stat) {
   const showPts = ['initial','i3qa','fix','rv'].includes(stat);
   // For missed stat: add I3QA_LABEL column to make the M flag visible
   const COLS = stat === 'missed'
-    ? ['UID','CATEGORY','QC_ID','I3QA_ID','I3QA_LABEL','FIX1_ID','RV1_ID','COMBO?']
+    ? ['UID','I3QA_CAT','QC_ID','I3QA_ID','I3QA_LABEL','FIX1_ID','RV1_ID','COMBO?']
     : ['UID','CATEGORY','QC_ID','I3QA_ID','FIX1_ID','FIX1_DATE','RV1_ID','RV1_LABEL','COMBO?'];
-  const LABELS = {UID:'UID',CATEGORY:'Cat','QC_ID':'QC Tech','I3QA_ID':'i3QA Tech',
+  const LABELS = {UID:'UID',CATEGORY:'Cat',I3QA_CAT:'i3QA Cat','QC_ID':'QC Tech','I3QA_ID':'i3QA Tech',
     I3QA_LABEL:'i3QA Label',FIX1_ID:'Fix1 Tech',FIX1_DATE:'Fix1 Date',
     RV1_ID:'RV1 Tech',RV1_LABEL:'RV1 Label','COMBO?':'COMBO'};
 
@@ -3158,7 +3183,9 @@ function openDrillDown(techId, stat) {
   const normalize = row => {
     if (row.uid !== undefined) {
       return { UID:row.uid, CATEGORY:row.category, QC_ID:row.qc_id,
-        I3QA_ID:row.i3qa_id, FIX1_ID:row.fix1_id, FIX1_DATE:row.fix1_date,
+        I3QA_ID:row.i3qa_id, I3QA_LABEL:row.i3qa_label,
+        I3QA_CAT:row._raw?.I3QA_CAT || row._raw?.i3qa_cat || '—',
+        FIX1_ID:row.fix1_id, FIX1_DATE:row.fix1_date,
         RV1_ID:row.rv1_id, RV1_LABEL:row.rv1_label, 'COMBO?':row.ir,
         _processed:true, _allFix: [row.fix1_id, row._raw?.FIX2_ID, row._raw?.FIX3_ID, row._raw?.FIX4_ID, row._raw?.FIX5_ID].filter(Boolean)
       };
