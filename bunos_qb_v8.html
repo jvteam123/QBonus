@@ -1,0 +1,3448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IC Fixpoints Viewer · Phili</title>
+<meta name="description" content="IC Fixpoints Viewer — Phili internal tool for fixpoint task tracking and bonus calculation.">
+<meta name="theme-color" content="#0f1e32">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  /* Brand palette — deep sapphire navy with electric cyan accent */
+  --navy:#0f1e32; --navy2:#152540; --navy3:#1c2f50;
+  --accent:#0ea5e9; --accent-hover:#0284c7; --accent-dim:#0369a1;
+  --accent-glow:rgba(14,165,233,0.18);
+
+  /* Surfaces */
+  --bg:#f1f5f9; --surface:#ffffff; --surface2:#f8fafc;
+  --border:#e2e8f0; --border-light:#f0f4f8;
+
+  /* Typography */
+  --text:#0f172a; --text-muted:#64748b; --text-light:#94a3b8;
+
+  /* Semantic */
+  --green:#059669; --green-bg:#ecfdf5; --green-border:#6ee7b7;
+  --amber:#d97706; --amber-bg:#fffbeb; --amber-border:#fcd34d;
+  --red:#dc2626; --red-bg:#fef2f2; --red-border:#fca5a5;
+  --purple:#7c3aed; --purple-bg:#f5f3ff;
+
+  /* Table */
+  --row-hover:#f0f9ff; --row-selected:#e0f2fe;
+  --header-bg:#0f1e32; --header-text:#e2e8f0; --col-border:rgba(255,255,255,0.07);
+
+  /* Blue tint */
+  --blue-light:#eff6ff;
+
+  /* Shadows */
+  --shadow-sm:0 1px 3px rgba(15,30,50,0.08),0 1px 2px rgba(15,30,50,0.05);
+  --shadow-md:0 4px 12px rgba(15,30,50,0.10),0 2px 6px rgba(15,30,50,0.06);
+  --shadow-lg:0 12px 32px rgba(15,30,50,0.14),0 4px 12px rgba(15,30,50,0.08);
+  --shadow-topbar:0 2px 0 rgba(14,165,233,0.15),0 3px 12px rgba(15,30,50,0.3);
+
+  /* Radius */
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:18px;
+}
+[data-theme="dark"] {
+  --navy:#060d18; --navy2:#0a1525; --navy3:#0f1e35;
+  --bg:#0b1422; --surface:#0f1e32; --surface2:#111f35;
+  --border:#1a2e4a; --border-light:#152236;
+  --text:#e2e8f0; --text-muted:#7a90a8; --text-light:#3d5572;
+  --green:#10b981; --green-bg:#052e1c; --green-border:#065f46;
+  --amber:#f59e0b; --amber-bg:#1c1407; --amber-border:#78350f;
+  --red:#f87171; --red-bg:#1f0707; --red-border:#7f1d1d;
+  --purple:#a78bfa; --purple-bg:#1e0a3c;
+  --row-hover:#0d1e32; --row-selected:#0e2640;
+  --header-bg:#06101e; --header-text:#a8c0d8; --col-border:rgba(255,255,255,0.05);
+  --blue-light:#0a1a2e;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.4); --shadow-md:0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:0 12px 32px rgba(0,0,0,0.6); --shadow-topbar:0 2px 0 rgba(14,165,233,0.2),0 3px 12px rgba(0,0,0,0.6);
+}
+/* theme toggle button */
+.btn-theme{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.1);padding:6px 11px;border-radius:var(--r-sm);font-size:0.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.15s;}
+.btn-theme:hover{background:rgba(14,165,233,0.15);color:#fff;border-color:rgba(14,165,233,0.4);}
+/* calc-all modal */
+.ca-progress{background:var(--border);border-radius:4px;height:6px;margin:8px 0;}
+.ca-bar{height:6px;border-radius:4px;background:var(--accent);transition:width 0.3s;}
+.ca-result-table{width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:12px;}
+.ca-result-table th{background:var(--header-bg);color:var(--header-text);padding:8px 10px;text-align:left;font-size:0.72rem;font-weight:600;position:sticky;top:0;}
+.ca-result-table td{padding:7px 10px;border-bottom:1px solid var(--border-light);}
+.ca-result-table tr:hover td{background:var(--row-hover);}
+.ca-result-table tfoot td{font-weight:700;border-top:2px solid var(--border);background:var(--bg);}
+/* team filter bar */
+#team-filter-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+#team-filter-bar label{font-size:0.72rem;font-weight:600;color:var(--text-muted);white-space:nowrap;}
+.team-chip{padding:4px 11px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:0.72rem;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--text-muted);white-space:nowrap;box-shadow:var(--shadow-sm);}
+.team-chip:hover{border-color:var(--accent);color:var(--accent);}
+.team-chip.active{border-color:var(--accent);background:linear-gradient(135deg,var(--accent),var(--accent-dim));color:#fff;box-shadow:0 1px 4px rgba(14,165,233,0.35);}
+*{box-sizing:border-box;margin:0;padding:0;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+.app-shell{display:flex;flex-direction:column;height:100vh;}
+/* TOPBAR */
+.topbar{background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;flex-shrink:0;box-shadow:var(--shadow-topbar);position:relative;z-index:20;}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(14,165,233,0.4),transparent);}
+.topbar-logo{display:flex;align-items:center;gap:10px;}
+.topbar-logo .icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 12px var(--accent-glow),0 2px 6px rgba(0,0,0,0.3);}
+.topbar-logo h1{color:#fff;font-size:1rem;font-weight:700;letter-spacing:-0.02em;}
+.topbar-logo span{color:rgba(255,255,255,0.35);font-size:0.72rem;margin-left:4px;font-weight:400;}
+.topbar-spacer{flex:1;}
+.topbar-actions{display:flex;gap:8px;align-items:center;}
+/* project badge in topbar */
+#project-badge{display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border-radius:8px;padding:4px 12px;}
+#project-badge .pb-site{font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--accent);color:#fff;}
+#project-badge .pb-gsd{font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#10b981;color:#fff;}
+#project-badge .pb-type{font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;}
+#project-badge .pb-type.ir{background:#f59e0b;color:#fff;}
+#project-badge .pb-type.non{background:#6b7a8d;color:#fff;}
+#project-badge .pb-name{font-size:0.78rem;color:rgba(255,255,255,0.7);font-weight:500;}
+/* SIDEBAR */
+.layout{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:224px;flex-shrink:0;background:var(--navy2);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid rgba(255,255,255,0.04);box-shadow:2px 0 8px rgba(0,0,0,0.15);}
+.sidebar-section{padding:8px 0;}
+.sidebar-label{padding:6px 16px 4px;font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 16px;color:rgba(255,255,255,0.55);font-size:0.8rem;font-weight:500;cursor:pointer;transition:all 0.15s;border-left:3px solid transparent;border-radius:0;}
+.sidebar-item:hover{background:rgba(14,165,233,0.08);color:rgba(255,255,255,0.9);}
+.sidebar-item.active{background:rgba(14,165,233,0.14);color:#fff;border-left-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(14,165,233,0.1);}
+.sidebar-item .si-icon{font-size:14px;width:18px;text-align:center;}
+.sidebar-item .si-badge{margin-left:auto;background:rgba(255,255,255,0.12);border-radius:10px;padding:1px 6px;font-size:0.65rem;color:rgba(255,255,255,0.5);}
+.sidebar-divider{height:1px;background:rgba(255,255,255,0.07);margin:4px 12px;}
+.project-list{flex:1;overflow-y:auto;padding:4px 0;}
+.project-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:0.78rem;color:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.12s;border-left:3px solid transparent;}
+.project-item:hover{background:rgba(14,165,233,0.07);color:rgba(255,255,255,0.85);}
+.project-item.active{background:rgba(14,165,233,0.12);color:#fff;border-left-color:rgba(14,165,233,0.6);}
+.project-item .pi-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.project-item .pi-count{font-size:0.65rem;color:rgba(255,255,255,0.3);}
+.project-item .pi-del{opacity:0;font-size:11px;color:rgba(255,100,100,0.7);transition:opacity 0.1s;}
+.project-item:hover .pi-del{opacity:1;}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+/* DROPZONE */
+#dropzone-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
+#dropzone{border:2px dashed var(--border);border-radius:var(--r-xl);background:var(--surface2);padding:52px 40px;text-align:center;cursor:pointer;transition:all 0.22s;position:relative;max-width:600px;width:100%;box-shadow:var(--shadow-sm);}
+#dropzone.drag-over{border-color:var(--accent);background:var(--blue-light);transform:scale(1.01);box-shadow:0 0 0 4px var(--accent-glow);}
+#dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+#dropzone .dz-icon{font-size:3rem;margin-bottom:14px;}
+#dropzone h2{font-size:1.1rem;font-weight:600;color:#37474f;margin-bottom:6px;}
+#dropzone p{font-size:0.82rem;color:#78909c;}
+#dropzone .dz-hint{margin-top:12px;font-size:0.75rem;color:#b0bec5;}
+/* CONTENT */
+#content-area{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0;}
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;box-shadow:0 1px 3px rgba(15,30,50,0.04);}
+.toolbar-group{display:flex;align-items:center;gap:6px;}
+.toolbar-divider{width:1px;height:20px;background:var(--border);margin:0 4px;}
+.tb-input{padding:7px 10px 7px 32px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.8rem;outline:none;background:var(--bg);transition:all 0.15s;min-width:200px;box-shadow:var(--shadow-sm);}
+.tb-input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-glow);}
+.tb-select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.8rem;background:var(--bg);color:var(--text);outline:none;cursor:pointer;box-shadow:var(--shadow-sm);transition:border-color 0.15s;}
+.tb-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.btn{padding:7px 14px;border-radius:var(--r-sm);font-size:0.8rem;font-weight:600;cursor:pointer;border:none;transition:all 0.18s;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.01em;white-space:nowrap;}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-dim));color:#fff;box-shadow:0 1px 4px rgba(14,165,233,0.35),0 0 0 1px rgba(14,165,233,0.2);}
+.btn-primary:hover{background:linear-gradient(135deg,var(--accent-hover),#0254a0);box-shadow:0 2px 8px rgba(14,165,233,0.45);}
+.btn-ghost{background:var(--surface);color:var(--text-muted);border:1px solid var(--border);box-shadow:var(--shadow-sm);}
+.btn-ghost:hover{background:var(--bg);color:var(--text);border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:var(--surface);color:var(--red);border:1px solid var(--red-border);box-shadow:var(--shadow-sm);}
+.btn-danger:hover{background:var(--red-bg);}
+.btn-settings{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.12);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.btn-settings:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(14,165,233,0.4);}
+/* STATS BAR */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0;}
+.stat-cell{background:var(--surface);padding:11px 16px 10px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+.stat-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--border);transition:background 0.2s;}
+.stat-cell.accent::before{background:var(--accent);}
+.stat-cell.green::before{background:var(--green);}
+.stat-cell.amber::before{background:var(--amber);}
+.stat-cell.red::before{background:var(--red);}
+.stat-cell .sc-label{font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-light);margin-bottom:4px;}
+.stat-cell .sc-value{font-size:1.25rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1;}
+.stat-cell .sc-sub{font-size:0.65rem;color:var(--text-light);margin-top:2px;}
+.stat-cell.accent .sc-value{color:var(--accent);}
+.stat-cell.green .sc-value{color:var(--green);}
+.stat-cell.amber .sc-value{color:var(--amber);}
+.stat-cell.red .sc-value{color:var(--red);}
+/* TABLE */
+.table-wrap{flex:1;overflow:auto;}
+table.qb-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+table.qb-table thead th{background:var(--header-bg);color:var(--header-text);padding:10px 12px;text-align:left;font-weight:700;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;position:sticky;top:0;z-index:10;border-right:1px solid var(--col-border);cursor:pointer;user-select:none;line-height:1.35;transition:background 0.12s;}
+table.qb-table thead th:last-child{border-right:none;}
+table.qb-table thead th:hover{background:#1a3050;}
+table.qb-table thead th.sort-asc::after{content:' ▲';font-size:0.6rem;opacity:0.8;}
+table.qb-table thead th.sort-desc::after{content:' ▼';font-size:0.6rem;opacity:0.8;}
+table.qb-table thead tr.filter-row th{background:#f8fafc;padding:4px 6px;border-bottom:2px solid var(--border);cursor:default;}
+table.qb-table thead tr.filter-row th:hover{background:#f8fafc;}
+.col-filter{width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:0.72rem;font-family:inherit;outline:none;background:#fff;}
+.col-filter:focus{border-color:var(--accent);}
+table.qb-table tbody tr{border-bottom:1px solid var(--border-light);transition:background 0.1s;}
+table.qb-table tbody tr:hover{background:var(--row-hover);}
+table.qb-table tbody tr.selected{background:var(--row-selected);}
+table.qb-table tbody td{padding:8px 12px;white-space:nowrap;color:var(--text);border-right:1px solid var(--border-light);}
+table.qb-table tbody td:last-child{border-right:none;}
+table.qb-table tfoot tr{background:var(--surface2);border-top:2px solid var(--border);}
+table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white-space:nowrap;border-right:1px solid var(--border-light);color:var(--text);}
+.cell-link{color:var(--accent);text-decoration:none;cursor:pointer;}
+.cell-link:hover{text-decoration:underline;}
+.cell-mono{font-family:'JetBrains Mono',monospace;font-size:0.72rem;}
+.cell-num{text-align:right;font-family:'JetBrains Mono',monospace;}
+.cell-num-blue{color:var(--accent);font-weight:500;}
+.cell-points{text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--text);}
+.cell-qp{text-align:right;font-family:'JetBrains Mono',monospace;}
+.eye-btn{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:2px 4px;border-radius:4px;}
+.eye-btn:hover{color:var(--accent);background:var(--blue-light);}
+/* PAGINATION */
+.pagination-bar{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+.pagination-bar span{font-size:0.78rem;color:var(--text-muted);}
+.page-btns{display:flex;gap:4px;}
+.page-btn{padding:5px 11px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.75rem;font-weight:500;cursor:pointer;background:var(--surface);transition:all 0.15s;color:var(--text-muted);}
+.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 4px rgba(14,165,233,0.35);}
+.page-btn:disabled{opacity:0.35;cursor:default;}
+.page-btn:hover:not(:disabled):not(.active){background:var(--bg);border-color:var(--accent);color:var(--accent);}
+/* LOADING */
+#loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;z-index:100;}
+#loading-overlay.show{display:flex;}
+.loading-box{background:var(--surface);border-radius:var(--r-xl);padding:32px 40px;text-align:center;box-shadow:var(--shadow-lg);border:1px solid var(--border);}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 14px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-box p{font-size:0.85rem;color:var(--text-muted);}
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:200;background:var(--navy);color:#e2e8f0;padding:11px 20px;border-radius:var(--r-md);font-size:0.82rem;font-weight:500;opacity:0;transform:translateY(12px) scale(0.97);transition:all 0.22s cubic-bezier(.4,0,.2,1);pointer-events:none;box-shadow:var(--shadow-lg);border:1px solid rgba(14,165,233,0.2);border-left:3px solid var(--accent);}
+#toast.show{opacity:1;transform:translateY(0) scale(1);}
+/* MODAL BASE */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(9,18,32,0.60);backdrop-filter:blur(3px);z-index:50;align-items:center;justify-content:center;overflow:hidden;padding:20px;}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow-lg),0 0 0 1px rgba(14,165,233,0.08);position:relative;width:100%;}
+.modal-sm{max-width:400px;}
+.modal-md{max-width:560px;}
+.modal-lg{max-width:860px;max-height:90vh;display:flex;flex-direction:column;}
+.modal-lg .modal-body{flex:1;overflow-y:auto;}
+.modal-header{padding:22px 24px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid transparent;}
+.modal-header h3{font-size:1.05rem;font-weight:700;color:var(--text);}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-light);line-height:1;padding:4px 6px;border-radius:6px;transition:all 0.15s;}
+.modal-close:hover{color:var(--text);background:var(--bg);}
+.modal-body{padding:20px 24px;overflow-y:auto;color:var(--text);}
+.modal-footer{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end;}
+/* IMPORT MODAL options */
+.opt-grid{display:grid;gap:16px;margin-bottom:16px;}
+.opt-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.opt-row label{font-size:0.8rem;font-weight:600;color:var(--text-muted);min-width:90px;}
+.opt-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{padding:6px 15px;border-radius:20px;border:2px solid var(--border);background:var(--surface);font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--text-muted);box-shadow:var(--shadow-sm);}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+.chip.selected{border-color:var(--accent);background:linear-gradient(135deg,var(--accent),var(--accent-dim));color:#fff;box-shadow:0 2px 6px rgba(14,165,233,0.3);}
+.chip.selected.green{border-color:var(--green);background:var(--green);}
+.chip.selected.amber{border-color:var(--amber);background:var(--amber);}
+.chip.selected.red{border-color:var(--red);background:var(--red);}
+.chip.selected.gray{border-color:#6b7a8d;background:#6b7a8d;}
+.opt-input{padding:7px 12px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.82rem;outline:none;width:140px;}
+.opt-input:focus{border-color:var(--accent);}
+/* SETTINGS MODAL tabs */
+.settings-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;}
+.stab{padding:10px 18px;font-size:0.8rem;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all 0.15s;border-radius:6px 6px 0 0;}
+.stab:hover{color:var(--text);background:var(--bg);}
+.stab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--blue-light);}
+.stab-content{display:none;}
+.stab-content.active{display:block;}
+/* editable modifier table */
+.mod-table{width:100%;border-collapse:collapse;font-size:0.8rem;}
+.mod-table th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:600;font-size:0.72rem;color:var(--text-muted);border-bottom:2px solid var(--border);}
+.mod-table td{padding:6px 10px;border-bottom:1px solid var(--border-light);}
+.mod-table tr:hover td{background:var(--row-hover);}
+.mod-input{padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;width:80px;outline:none;}
+.mod-input:focus{border-color:var(--accent);}
+.settings-info{font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;padding:10px 14px;background:var(--blue-light);border-radius:var(--r-md);border-left:3px solid var(--accent);line-height:1.5;}
+/* BONUS PANEL */
+.bonus-panel{background:linear-gradient(135deg,var(--surface),var(--blue-light));border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex-shrink:0;font-size:0.8rem;box-shadow:inset 0 -1px 0 var(--border);}
+.bonus-panel strong{color:var(--text);}
+.bp-group{display:flex;align-items:center;gap:6px;}
+.bp-group label{color:var(--text-muted);font-weight:600;font-size:0.76rem;}
+.bp-result{background:var(--blue-light);border-radius:6px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);font-size:0.82rem;}
+.bp-result.green{background:#d1fae5;color:var(--green);}
+.bp-result.amber{background:#fef3c7;color:#b45309;}
+.bp-input{width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.8rem;outline:none;background:var(--bg);}
+.bp-input:focus{border-color:var(--accent);}
+#bonus-panel-wrap{display:none;}
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(100,116,139,0.35);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(100,116,139,0.6);}
+.empty-state{padding:60px 20px;text-align:center;color:var(--text-muted);}
+.empty-state .es-icon{font-size:2.5rem;margin-bottom:12px;}
+.empty-state p{font-size:0.85rem;}
+/* toggle group */
+.tgl-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.tgl-row label{font-size:0.8rem;font-weight:600;color:var(--text-muted);min-width:110px;}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="icon">📍</div>
+      <h1>IC Fixpoints <span style="font-weight:400;color:rgba(255,255,255,0.45);font-size:0.72rem;margin-left:2px;letter-spacing:0.02em;">VIEWER · PHILI</span></h1>
+    </div>
+    <span style="font-size:0.62rem;font-weight:700;color:rgba(14,165,233,0.7);background:rgba(14,165,233,0.1);padding:2px 7px;border-radius:4px;border:1px solid rgba(14,165,233,0.2);letter-spacing:0.06em;">v8.0</span>
+    <div id="project-badge">
+      <span class="pb-site" id="pb-site">—</span>
+      <span class="pb-gsd" id="pb-gsd">6in</span>
+      <span class="pb-type non" id="pb-type">Non-IR</span>
+      <span class="pb-name" id="pb-name">—</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-actions">
+      <button class="btn-theme" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode">🌙 Dark</button>
+      <button class="btn btn-settings" onclick="openSettings()" title="Configure categories, points, detection rules, tech roster &amp; teams">⚙ Settings &amp; Roster</button>
+      <button class="btn btn-ghost" onclick="openSaveModal()" id="btn-save-project" style="display:none">💾 Save Project</button>
+      <button class="btn btn-primary" onclick="triggerFileInput()">⬆ Import File</button>
+      <input type="file" id="file-input-hidden" accept=".zip,.dbf" style="display:none" />
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Views</div>
+        <div class="sidebar-item active" id="nav-tasks" onclick="switchView('tasks')">
+          <span class="si-icon">⊞</span> Fixpoint Tasks
+        </div>
+        <div class="sidebar-item" id="nav-tech" onclick="switchView('tech')">
+          <span class="si-icon">👤</span> Tech Summary
+        </div>
+        <div class="sidebar-item" id="nav-calcall" onclick="switchView('calcall')">
+          <span class="si-icon">⚡</span> Calc All Projects
+        </div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-item" onclick="openAboutModal()">
+          <span class="si-icon">📖</span> Formula & About
+        </div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Saved Projects</div>
+        <div style="padding:2px 10px 6px;">
+          <button class="btn btn-primary" style="width:100%;font-size:0.75rem;padding:7px 8px;justify-content:center;" onclick="openNewProjectModal()">＋ New Project</button>
+        </div>
+      </div>
+      <div class="project-list" id="project-list">
+        <div style="padding:8px 16px;font-size:0.72rem;color:rgba(255,255,255,0.25);">No saved projects yet</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <!-- DROPZONE -->
+      <div id="dropzone-wrap">
+        <div id="dropzone">
+          <input type="file" id="file-input-dz" accept=".zip,.dbf" />
+          <div class="dz-icon">📂</div>
+          <h2 style="font-size:1.05rem;font-weight:700;color:var(--text);">Drop your Fixpoints file here</h2>
+          <p>Accepts .zip (containing .dbf) or a bare .dbf file</p>
+          <div class="dz-hint">Points calculated per Phili IC formula · Configure GSD & type before or after import</div>
+        </div>
+      </div>
+
+      <!-- CONTENT -->
+      <div id="content-area" style="display:none">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <div style="position:relative;display:inline-flex;align-items:center;">
+              <svg style="position:absolute;left:9px;color:var(--text-light);pointer-events:none;flex-shrink:0;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="search-input" class="tb-input" placeholder="Search UID, tech, name…" oninput="applyFilters()" />
+            </div>
+          </div>
+          <div class="toolbar-divider"></div>
+          <div class="toolbar-group">
+            <select id="cat-filter" class="tb-select" onchange="applyFilters()">
+              <option value="">All Categories</option>
+              <option value="1">Cat 1</option><option value="2">Cat 2</option>
+              <option value="3">Cat 3</option><option value="4">Cat 4</option>
+              <option value="5">Cat 5</option><option value="6">Cat 6</option>
+              <option value="7">Cat 7</option><option value="8">Cat 8</option>
+              <option value="9">Cat 9</option>
+            </select>
+            <select id="ir-filter" class="tb-select" onchange="applyFilters()">
+              <option value="">All Types</option>
+              <option value="IR">IR Only</option>
+              <option value="COMBO">COMBO Only</option>
+              <option value="N">Non-IR</option>
+            </select>
+          </div>
+          <div class="toolbar-divider"></div>
+          <div class="toolbar-group">
+            <select id="rows-per-page" class="tb-select" onchange="changePageSize()">
+              <option value="50">50 rows</option>
+              <option value="100" selected>100 rows</option>
+              <option value="200">200 rows</option>
+              <option value="500">500 rows</option>
+            </select>
+          </div>
+          <div class="toolbar-spacer" style="flex:1"></div>
+          <button class="btn btn-ghost" onclick="downloadCSV()" style="gap:6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV</button>
+        </div>
+
+        <!-- Bonus Panel (Tech view only) -->
+        <div id="bonus-panel-wrap">
+          <div class="bonus-panel">
+            <strong>🎯 Bonus Calculator</strong>
+            <div class="bp-group">
+              <label>Base PHP Multiplier:</label>
+              <input type="number" id="bp-manual-mult" class="bp-input" value="9.50" min="0" step="0.01" oninput="recalcBonus()" />
+            </div>
+            <div class="bp-group">
+              <label>🔍</label>
+              <div style="position:relative;display:inline-flex;align-items:center;">
+                <svg style="position:absolute;left:7px;color:var(--text-light);pointer-events:none;" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="tech-search-input" class="bp-input" style="width:160px;padding-left:26px;" placeholder="Search tech…" oninput="applyTechFilter()" />
+              </div>
+            </div>
+            <div class="bp-group" id="bp-threshold-legend" style="font-size:0.72rem;color:var(--text-muted);gap:10px;">
+              <span style="color:var(--green);font-weight:600;">★ = Threshold bonus applied</span>
+            </div>
+            <div class="bp-group" style="margin-left:auto">
+              <span style="font-size:0.7rem;color:var(--text-muted)">Points × Multiplier × Quality%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Filter Bar (Tech view only) -->
+        <div id="team-filter-bar" style="display:none">
+          <label>🏷 Filter Team:</label>
+          <div id="team-chips" style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span class="team-chip active" data-team="" onclick="selectTeamChip(this)">All Teams</span>
+          </div>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="stats-bar">
+          <div class="stat-cell accent"><div class="sc-label">Total Records</div><div class="sc-value" id="s-total">0</div><div class="sc-sub">fixpoints</div></div>
+          <div class="stat-cell green"><div class="sc-label">Total Points</div><div class="sc-value" id="s-points">0</div><div class="sc-sub">all tasks</div></div>
+          <div class="stat-cell"><div class="sc-label">Unique QC Techs</div><div class="sc-value" id="s-qc">0</div></div>
+          <div class="stat-cell"><div class="sc-label">Unique Fix Techs</div><div class="sc-value" id="s-fix">0</div></div>
+          <div class="stat-cell amber"><div class="sc-label">IR / COMBO</div><div class="sc-value" id="s-ir">0</div></div>
+          <div class="stat-cell red"><div class="sc-label">Refixes</div><div class="sc-value" id="s-ref">0</div></div>
+          <div class="stat-cell"><div class="sc-label">GSD</div><div class="sc-value" id="s-gsd" style="color:var(--green)">6in</div></div>
+          <div class="stat-cell"><div class="sc-label">Site</div><div class="sc-value" id="s-site" style="font-size:0.9rem;color:var(--accent)">—</div></div>
+        </div>
+
+        <!-- TASKS TABLE -->
+        <div id="view-tasks" class="table-wrap">
+          <table class="qb-table" id="main-table">
+            <thead>
+              <tr id="header-row">
+                <th style="width:36px"></th>
+                <th onclick="sortBy('uid')">UID</th>
+                <th onclick="sortBy('category')">Cat</th>
+                <th onclick="sortBy('ir')">COMBO</th>
+                <th onclick="sortBy('qc_id')">QC Tech</th>
+                <th onclick="sortBy('i3qa_id')">i3QA Tech</th>
+                <th onclick="sortBy('i3qa_label')">i3QA Label</th>
+                <th onclick="sortBy('fix1_id')">Fix1 Tech</th>
+                <th onclick="sortBy('fix1_date')">Fix1 Date</th>
+                <th onclick="sortBy('fixed1')">Fixed?</th>
+                <th onclick="sortBy('rv1_id')">RV1 Tech</th>
+                <th onclick="sortBy('rv1_label')">RV1 Label</th>
+                <th onclick="sortBy('qa1_id')">QA1 Tech</th>
+                <th onclick="sortBy('zfix_count')">Refixes</th>
+                <th onclick="sortBy('total_points')">Points</th>
+              </tr>
+              <tr class="filter-row">
+                <th></th>
+                <th><input class="col-filter" placeholder="Filter…" oninput="colFilter(this,1)"/></th>
+                <th><input class="col-filter" placeholder="" oninput="colFilter(this,2)"/></th>
+                <th></th>
+                <th><input class="col-filter" placeholder="Filter…" oninput="colFilter(this,4)"/></th>
+                <th><input class="col-filter" placeholder="Filter…" oninput="colFilter(this,5)"/></th>
+                <th></th>
+                <th><input class="col-filter" placeholder="Filter…" oninput="colFilter(this,7)"/></th>
+                <th></th><th></th>
+                <th><input class="col-filter" placeholder="Filter…" oninput="colFilter(this,10)"/></th>
+                <th></th>
+                <th><input class="col-filter" placeholder="Filter…" oninput="colFilter(this,12)"/></th>
+                <th></th><th></th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+            <tfoot id="table-foot"></tfoot>
+          </table>
+        </div>
+
+        <!-- TECH TABLE -->
+        <div id="view-tech" class="table-wrap" style="display:none">
+          <table class="qb-table" id="tech-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th onclick="sortTech('month')">Month / Project</th>
+                <th onclick="sortTech('id')">Tech ID</th>
+                <th onclick="sortTech('name')">Full Name</th>
+                <th onclick="sortTech('team')">Team</th>
+                <th onclick="sortTech('teamNum')">Team #</th>
+                <th onclick="sortTech('initial')"># Initial<br>Tagging</th>
+                <th onclick="sortTech('i3qa')"># i3QA</th>
+                <th onclick="sortTech('rv')"># RV</th>
+                <th onclick="sortTech('fix')"># Fix</th>
+                <th onclick="sortTech('missed')"># Missed/<br>Rework</th>
+                <th onclick="sortTech('refix')"># Refix</th>
+                <th onclick="sortTech('warn')"># Warn</th>
+                <th onclick="sortTech('points')">Total Points</th>
+                <th onclick="sortTech('qp')">Fix Quality %</th>
+                <th onclick="sortTech('qualityPctMod')">Quality<br>% Mod</th>
+                <th onclick="sortTech('bonusMultiplier')">Bonus<br>Mult (PHP)</th>
+                <th onclick="sortTech('totalBonus')">Total Bonus<br>(PHP)</th>
+              </tr>
+            </thead>
+            <tbody id="tech-body"></tbody>
+            <tfoot id="tech-foot"></tfoot>
+          </table>
+        </div>
+
+        <!-- CALC ALL VIEW -->
+        <div id="view-calcall" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+          <!-- Calc All Toolbar -->
+          <div class="toolbar" id="ca-toolbar">
+            <div class="toolbar-group">
+              <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted)">Base PHP Multiplier:</span>
+              <input type="number" id="ca-mult" class="mod-input" value="9.50" step="0.01" min="0" style="width:90px;" />
+              <button class="btn btn-primary" onclick="runCalcAll()" style="padding:7px 18px;">⚡ Calculate All</button>
+            </div>
+            <div class="toolbar-divider"></div>
+            <div class="toolbar-group">
+              <div style="position:relative;display:inline-flex;align-items:center;">
+                <svg style="position:absolute;left:9px;color:var(--text-light);pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="ca-search-input" class="tb-input" placeholder="Search tech ID, name, team…" oninput="applyCalcAllFilter()" style="min-width:200px;" />
+              </div>
+            </div>
+            <div class="toolbar-spacer" style="flex:1"></div>
+            <span id="ca-project-count" style="font-size:0.75rem;color:var(--text-muted);margin-right:8px;"></span>
+            <button class="btn btn-ghost" onclick="exportCalcAllCSV()" style="gap:6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV</button>
+          </div>
+          <!-- Calc All Team Filter -->
+          <div id="ca-team-filter-bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
+            <label style="font-size:0.72rem;font-weight:600;color:var(--text-muted);white-space:nowrap;">🏷 Filter Team:</label>
+            <div id="ca-team-chips" style="display:flex;gap:5px;flex-wrap:wrap;">
+              <span class="team-chip active" data-team="" onclick="selectCalcAllTeamChip(this)">All Teams</span>
+            </div>
+          </div>
+          <!-- Calc All Stats Bar -->
+          <div class="stats-bar" id="ca-stats-bar" style="display:none;">
+            <div class="stat-cell accent"><div class="sc-label">Total Techs</div><div class="sc-value" id="cas-techs">0</div></div>
+            <div class="stat-cell green"><div class="sc-label">Total Points</div><div class="sc-value" id="cas-points">0</div></div>
+            <div class="stat-cell"><div class="sc-label"># Initial</div><div class="sc-value" id="cas-initial">0</div></div>
+            <div class="stat-cell"><div class="sc-label"># i3QA</div><div class="sc-value" id="cas-i3qa">0</div></div>
+            <div class="stat-cell"><div class="sc-label"># RV</div><div class="sc-value" id="cas-rv">0</div></div>
+            <div class="stat-cell"><div class="sc-label"># Fix</div><div class="sc-value" id="cas-fix">0</div></div>
+            <div class="stat-cell amber"><div class="sc-label"># Missed/Rework</div><div class="sc-value" id="cas-missed">0</div></div>
+            <div class="stat-cell red"><div class="sc-label"># Refix</div><div class="sc-value" id="cas-refix">0</div></div>
+            <div class="stat-cell"><div class="sc-label">Total Bonus</div><div class="sc-value green" id="cas-bonus" style="font-size:0.9rem;">₱0</div></div>
+            <div class="stat-cell"><div class="sc-label">Projects</div><div class="sc-value" id="cas-projects">0</div></div>
+          </div>
+          <!-- Progress bar -->
+          <div id="ca-progress-wrap" style="display:none;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);">
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px;" id="ca-progress-label">Loading projects…</div>
+            <div class="ca-progress"><div class="ca-bar" id="ca-bar" style="width:0%"></div></div>
+          </div>
+          <!-- Table -->
+          <div class="table-wrap" id="ca-table-wrap">
+            <div id="ca-empty-state" style="padding:60px 20px;text-align:center;color:var(--text-muted);">
+              <div style="font-size:2.5rem;margin-bottom:12px;">⚡</div>
+              <p style="font-size:0.85rem;">Click <strong>Calculate</strong> to aggregate all saved projects</p>
+            </div>
+            <table class="qb-table" id="ca-main-table" style="display:none;">
+              <thead>
+                <tr id="ca-header-row">
+                  <th onclick="sortCalcAll('id')">Tech ID</th>
+                  <th onclick="sortCalcAll('name')">Full Name</th>
+                  <th onclick="sortCalcAll('team')">Team</th>
+                  <th onclick="sortCalcAll('teamNum')">Team #</th>
+                  <th onclick="sortCalcAll('initial')"># Initial<br>Tagging</th>
+                  <th onclick="sortCalcAll('i3qa')"># i3QA</th>
+                  <th onclick="sortCalcAll('rv')"># RV</th>
+                  <th onclick="sortCalcAll('fix')"># Fix</th>
+                  <th onclick="sortCalcAll('missed')"># Missed/<br>Rework</th>
+                  <th onclick="sortCalcAll('refix')"># Refix</th>
+                  <th onclick="sortCalcAll('warn')"># Warn</th>
+                  <th onclick="sortCalcAll('points')">Total Points</th>
+                  <th onclick="sortCalcAll('qp')">Fix Quality %</th>
+                  <th onclick="sortCalcAll('qualityPctMod')">Quality<br>% Mod</th>
+                  <th onclick="sortCalcAll('bonusMult')">Bonus<br>Mult (PHP)</th>
+                  <th onclick="sortCalcAll('totalBonus')">Total Bonus<br>(PHP)</th>
+                  <th>Projects</th>
+                </tr>
+              </thead>
+              <tbody id="ca-body"></tbody>
+              <tfoot id="ca-foot"></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-bar">
+          <span id="page-info">–</span>
+          <div class="page-btns">
+            <button class="page-btn" id="prev-btn" onclick="changePage(-1)">← Prev</button>
+            <span id="page-mid" style="display:flex;gap:4px;"></span>
+            <button class="page-btn" id="next-btn" onclick="changePage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ IMPORT OPTIONS MODAL ══════════════ -->
+<div class="modal-backdrop" id="import-modal">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h3>📂 Import Project Settings</h3>
+    </div>
+    <div class="modal-body">
+      <div class="opt-grid">
+        <div class="opt-row">
+          <label>Site</label>
+          <div class="opt-chips">
+            <div class="chip selected" data-group="site" data-val="Cebu" onclick="selectChip(this)">🏙 Cebu</div>
+            <div class="chip" data-group="site" data-val="Manila" onclick="selectChip(this)">🏙 Manila</div>
+          </div>
+        </div>
+        <div class="opt-row">
+          <label>GSD Resolution</label>
+          <div class="opt-chips">
+            <div class="chip" data-group="gsd" data-val="3in" onclick="selectChip(this)">3 in</div>
+            <div class="chip selected green" data-group="gsd" data-val="6in" onclick="selectChip(this)">6 in</div>
+            <div class="chip" data-group="gsd" data-val="9in" onclick="selectChip(this)">9 in</div>
+          </div>
+        </div>
+        <div class="opt-row">
+          <label>Block Type</label>
+          <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text);">
+              <input type="radio" name="imp-blocktype" id="imp-bt-non" value="NON" checked onchange="impBlocktypeChange()" style="accent-color:var(--accent);width:16px;height:16px;">
+              Non-IR <span style="font-size:0.72rem;color:var(--text-muted);font-weight:400;">(auto-detects COMBO? column)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text);">
+              <input type="radio" name="imp-blocktype" id="imp-bt-ir" value="IR" onchange="impBlocktypeChange()" style="accent-color:var(--amber);width:16px;height:16px;">
+              IR <span style="font-size:0.72rem;color:var(--text-muted);font-weight:400;">(×1.5 all fix points)</span>
+            </label>
+          </div>
+        </div>
+        <div id="imp-ir-notice" style="display:none;padding:10px 14px;background:#fef3c7;border-radius:8px;border-left:3px solid var(--amber);font-size:0.78rem;color:#92400e;margin-top:-6px;">
+          ⚡ <strong>IR Project:</strong> All fix task points will be multiplied by ×1.5. SQM bonus multiplier does not apply.
+        </div>
+        <div class="opt-row">
+          <label>Month / Year</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="imp-month" class="opt-input" style="width:120px;">
+              <option value="January">January</option><option value="February">February</option>
+              <option value="March">March</option><option value="April">April</option>
+              <option value="May">May</option><option value="June">June</option>
+              <option value="July">July</option><option value="August">August</option>
+              <option value="September">September</option><option value="October">October</option>
+              <option value="November">November</option><option value="December">December</option>
+            </select>
+            <input type="number" id="imp-year" class="opt-input" style="width:90px;" min="2020" max="2099" />
+          </div>
+        </div>
+        <div class="opt-row">
+          <label>Project Name</label>
+          <input type="text" id="imp-name" class="opt-input" style="width:260px;" placeholder="Auto-filled from filename" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cancelImport()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmImport()">⬆ Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SITE SETTINGS MODAL ══════════════ -->
+<div class="modal-backdrop" id="settings-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>⚙ Site Settings — Modifier Tables</h3>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-tabs">
+        <div class="stab active" onclick="switchTab('cat')">📊 Category Values</div>
+        <div class="stab" onclick="switchTab('quality')">⭐ Quality % Modifiers</div>
+        <div class="stab" onclick="switchTab('ir')">🔀 IR Modifier</div>
+        <div class="stab" onclick="switchTab('detect')">🎯 Detection Rules</div>
+        <div class="stab" onclick="switchTab('bonus')">🎯 Bonus Thresholds</div>
+        <div class="stab" onclick="switchTab('roster')">👥 Tech Roster</div>
+        <div class="stab" onclick="switchTab('teams')">🏷 Teams</div>
+      </div>
+
+      <!-- Category Values -->
+      <div class="stab-content active" id="tab-cat">
+        <div class="settings-info">Points per fix task = Category GSD Value × IR Modifier (if applicable). Values differ by GSD resolution — edit below then click Save.</div>
+        <div style="overflow-x:auto;">
+          <table class="mod-table">
+            <thead><tr><th>Cat</th><th>3in Value</th><th>4in Value</th><th>6in Value</th><th>9in Value</th><th>IR Modifier</th></tr></thead>
+            <tbody id="cat-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quality % Modifiers -->
+      <div class="stab-content" id="tab-quality">
+        <div class="settings-info">Fix Quality % = Fix Tasks ÷ (Fix + Refix + Warnings). This modifier controls % of bonus actually paid out per tech.</div>
+        <div style="overflow-y:auto;max-height:420px;border:1px solid var(--border);border-radius:8px;">
+          <table class="mod-table" style="width:100%">
+            <thead style="position:sticky;top:0;z-index:2;background:#f1f5f9;"><tr><th>Quality % Lower</th><th>Quality % Upper</th><th>% of Bonus Earned</th></tr></thead>
+            <tbody id="quality-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- IR Modifier -->
+      <div class="stab-content" id="tab-ir">
+        <div class="settings-info">The IR Modifier multiplies the Category GSD value for fixpoints flagged as IR (Combo). Default is 1.5 per the PDF spec.</div>
+        <div class="tgl-row" style="margin-top:8px;">
+          <label>IR Multiplier:</label>
+          <input type="number" id="ir-mod-input" class="mod-input" step="0.1" min="1" max="5" value="1.5" style="width:100px;" />
+          <span style="font-size:0.75rem;color:var(--text-muted)">  (Applied to all IR-flagged fix task point values)</span>
+        </div>
+        <div class="tgl-row">
+          <label>Bonus Floor (PHP):</label>
+          <input type="number" id="bonus-floor-input" class="mod-input" step="0.5" min="1" max="50" value="9.5" style="width:100px;" />
+          <span style="font-size:0.75rem;color:var(--text-muted)">  (Minimum Bonus Multiplier regardless of calculations)</span>
+        </div>
+        <div class="tgl-row">
+          <label>RV1 Non-IR pts:</label>
+          <input type="number" id="rv1-non-ir-input" class="mod-input" step="0.01" value="0.2" style="width:100px;" />
+        </div>
+        <div class="tgl-row">
+          <label>RV1 IR pts:</label>
+          <input type="number" id="rv1-ir-input" class="mod-input" step="0.01" value="0.25" style="width:100px;" />
+        </div>
+        <div class="tgl-row">
+          <label>RV2+ pts each:</label>
+          <input type="number" id="rv2-input" class="mod-input" step="0.01" value="0.5" style="width:100px;" />
+        </div>
+        <div class="tgl-row">
+          <label>QC tag pts:</label>
+          <input type="number" id="qc-pts-input" class="mod-input" step="0.001" value="0.125" style="width:100px;" />
+          <span style="font-size:0.75rem;color:var(--text-muted)">  (1/8 per QC; negative if M/E label)</span>
+        </div>
+        <div class="tgl-row">
+          <label>i3QA pts:</label>
+          <input type="number" id="i3qa-pts-input" class="mod-input" step="0.001" value="0.0833" style="width:100px;" />
+          <span style="font-size:0.75rem;color:var(--text-muted)">  (1/12 per i3QA)</span>
+        </div>
+      </div>
+      <!-- Detection Rules -->
+      <div class="stab-content" id="tab-detect">
+        <div class="settings-info">Configure which DBF column names hold each task ID, and which label values trigger Refix, Miss, Warning, and QC Penalty counting. Use comma-separated values for multiple columns/labels.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:8px;">
+
+          <!-- Task Columns -->
+          <div>
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:10px;">Task Columns</div>
+            <div class="tgl-row">
+              <label style="min-width:80px;">QC</label>
+              <input type="text" id="det-qc-col" class="mod-input" style="width:200px;" placeholder="qc_id" />
+            </div>
+            <div class="tgl-row">
+              <label style="min-width:80px;">i3QA</label>
+              <input type="text" id="det-i3qa-col" class="mod-input" style="width:200px;" placeholder="i3qa_id" />
+            </div>
+            <div class="tgl-row">
+              <label style="min-width:80px;">RV1</label>
+              <input type="text" id="det-rv1-col" class="mod-input" style="width:200px;" placeholder="rv1_id" />
+            </div>
+            <div class="tgl-row">
+              <label style="min-width:80px;">RV2</label>
+              <input type="text" id="det-rv2-col" class="mod-input" style="width:200px;" placeholder="rv2_id" />
+            </div>
+          </div>
+
+          <!-- Trigger Conditions -->
+          <div>
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:10px;">Trigger Conditions</div>
+
+            <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Refix Labels</div>
+            <div class="tgl-row" style="margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+              <input type="text" id="det-refix-labels" class="mod-input" style="width:180px;" placeholder="e.g. i" />
+              <span style="font-size:0.72rem;color:var(--text-muted);align-self:center;">Columns:</span>
+              <input type="text" id="det-refix-cols" class="mod-input" style="width:220px;" placeholder="rv1_label, rv2_label, rv3_label" />
+            </div>
+
+            <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Miss Labels</div>
+            <div class="tgl-row" style="margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+              <input type="text" id="det-miss-labels" class="mod-input" style="width:180px;" placeholder="e.g. m, c" />
+              <span style="font-size:0.72rem;color:var(--text-muted);align-self:center;">Columns:</span>
+              <input type="text" id="det-miss-cols" class="mod-input" style="width:220px;" placeholder="i3qa_label, rv1_label, rv2_label, rv3_label" />
+            </div>
+
+            <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Warning Labels</div>
+            <div class="tgl-row" style="margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+              <input type="text" id="det-warn-labels" class="mod-input" style="width:180px;" placeholder="e.g. b, c, d, e, f, g, i" />
+              <span style="font-size:0.72rem;color:var(--text-muted);align-self:center;">Columns:</span>
+              <input type="text" id="det-warn-cols" class="mod-input" style="width:220px;" placeholder="r1_warn, r2_warn, r3_warn, r4_warn" />
+            </div>
+
+            <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">QC Penalty Labels</div>
+            <div class="tgl-row" style="flex-wrap:wrap;gap:6px;">
+              <input type="text" id="det-qcpen-labels" class="mod-input" style="width:180px;" placeholder="e.g. m, e" />
+              <span style="font-size:0.72rem;color:var(--text-muted);align-self:center;">Columns:</span>
+              <input type="text" id="det-qcpen-cols" class="mod-input" style="width:220px;" placeholder="i3qa_label" />
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:0.75rem;color:var(--text-muted);border:1px solid var(--border-light);">
+          <strong>How detection works:</strong>
+          Refix = label in <em>Refix Labels</em> found in any <em>Refix Columns</em>.
+          Miss = label in <em>Miss Labels</em> found in any <em>Miss Columns</em>.
+          Warning = label in <em>Warning Labels</em> found in any <em>Warning Columns</em>.
+          QC Penalty = label in <em>QC Penalty Labels</em> found in any <em>QC Penalty Columns</em> (negates QC points).
+          All label comparisons are case-insensitive.
+        </div>
+      </div>
+
+      <!-- Bonus Thresholds -->
+      <div class="stab-content" id="tab-bonus">
+        <div class="settings-info">Configure bonus tier overrides. When Fix Quality % meets a threshold, that <strong>Bonus Earned %</strong> replaces the standard quality tier lookup. Formula: Points × Base PHP Multiplier × (Bonus Earned % ÷ 100).</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px;">
+          <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid var(--border-light);">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:12px;">🏆 Top Tier</div>
+            <div class="tgl-row">
+              <label style="min-width:130px;">Quality % Threshold</label>
+              <input type="number" id="bonus-top-quality" class="mod-input" step="0.5" min="0" max="100" value="100" style="width:90px;" />
+              <span style="font-size:0.75rem;color:var(--text-muted);margin-left:4px;">%</span>
+            </div>
+            <div class="tgl-row">
+              <label style="min-width:130px;">Bonus Earned %</label>
+              <input type="number" id="bonus-top-mult" class="mod-input" step="0.5" min="0" max="200" value="120" style="width:90px;" />
+              <span style="font-size:0.75rem;color:var(--text-muted);margin-left:4px;">%</span>
+            </div>
+          </div>
+          <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid var(--border-light);">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--green);margin-bottom:12px;">✅ Mid Tier</div>
+            <div class="tgl-row">
+              <label style="min-width:130px;">Quality % Threshold</label>
+              <input type="number" id="bonus-mid-quality" class="mod-input" step="0.5" min="0" max="100" value="99.5" style="width:90px;" />
+              <span style="font-size:0.75rem;color:var(--text-muted);margin-left:4px;">%</span>
+            </div>
+            <div class="tgl-row">
+              <label style="min-width:130px;">Bonus Earned %</label>
+              <input type="number" id="bonus-mid-mult" class="mod-input" step="0.5" min="0" max="200" value="118" style="width:90px;" />
+              <span style="font-size:0.75rem;color:var(--text-muted);margin-left:4px;">%</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:10px 14px;background:var(--blue-light);border-radius:8px;font-size:0.75rem;color:var(--text-muted);border-left:3px solid var(--accent);">
+          These thresholds override the standard bonus multiplier for individual techs who achieve the target quality %. The Bonus Panel multiplier is still used as the base for techs below the thresholds.
+        </div>
+      </div>
+
+      <!-- Tech Roster -->
+      <div class="stab-content" id="tab-roster">
+        <div class="settings-info">Manage the tech roster used to resolve Tech IDs to full names and teams. Changes apply immediately on next recalculate.</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+          <input type="text" id="roster-search" class="tb-input" placeholder="🔍 Search by ID or name…" oninput="filterRosterTable()" style="min-width:200px;flex:1;" />
+          <button class="btn btn-primary" onclick="openAddTechModal()">➕ Add Tech</button>
+          <button class="btn btn-ghost" onclick="exportRosterCSV()">⬇ Export CSV</button>
+        </div>
+        <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+          <table class="mod-table" style="width:100%">
+            <thead style="position:sticky;top:0;z-index:2;">
+              <tr>
+                <th>Tech ID</th>
+                <th>Full Name</th>
+                <th>Team</th>
+                <th>Team #</th>
+                <th style="width:80px;text-align:center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="roster-table-body"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:0.72rem;color:var(--text-muted)" id="roster-count"></div>
+      </div>
+
+      <!-- Teams -->
+      <div class="stab-content" id="tab-teams">
+        <div class="settings-info">Manage teams. Renaming a team or its number updates all techs assigned to it automatically.</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" onclick="openAddTeamModal()">➕ Add Team</button>
+        </div>
+        <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+          <table class="mod-table" style="width:100%">
+            <thead style="position:sticky;top:0;z-index:2;">
+              <tr>
+                <th>Team Name</th>
+                <th>Team #</th>
+                <th style="text-align:right"># Techs</th>
+                <th style="width:100px;text-align:center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="teams-table-body"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:0.72rem;color:var(--text-muted)" id="teams-count"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="resetSettings()">↺ Reset to PDF Defaults</button>
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">💾 Save & Recalculate</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ADD/EDIT TEAM MODAL ══════════════ -->
+<div class="modal-backdrop" id="add-team-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 id="add-team-title">➕ Add Team</h3>
+      <button class="modal-close" onclick="closeModal('add-team-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;gap:10px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Team Name <span style="color:var(--red)">*</span></label>
+          <input type="text" id="team-name-input" placeholder="e.g. Team Cherrie" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.85rem;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Team # <span style="color:var(--red)">*</span></label>
+          <input type="text" id="team-num-input" placeholder="e.g. T_63" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.85rem;outline:none;" />
+        </div>
+      </div>
+      <p id="team-modal-err" style="color:var(--red);font-size:0.78rem;margin-top:8px;display:none;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-team-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTeamEntry()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ADD/EDIT TECH MODAL ══════════════ -->
+<div class="modal-backdrop" id="add-tech-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 id="add-tech-title">➕ Add Tech</h3>
+      <button class="modal-close" onclick="closeModal('add-tech-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;gap:10px;">
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Tech ID <span style="color:var(--red)">*</span></label>
+          <input type="text" id="tech-id-input" placeholder="e.g. 7099SS" maxlength="10" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;outline:none;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()" />
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Full Name <span style="color:var(--red)">*</span></label>
+          <input type="text" id="tech-name-input" placeholder="e.g. Juan dela Cruz" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.85rem;outline:none;" />
+        </div>
+        <div>
+          <label style="font-size:0.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Team</label>
+          <select id="tech-team-select" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.85rem;outline:none;background:var(--bg);color:var(--text);cursor:pointer;" onchange="onTeamSelectChange()">
+            <option value="">— Select a team —</option>
+          </select>
+          <!-- hidden inputs kept for compatibility with saveTechEntry / openEditTechModal -->
+          <input type="hidden" id="tech-team-input" />
+          <input type="hidden" id="tech-teamnum-input" />
+        </div>
+      </div>
+      <p id="tech-modal-err" style="color:var(--red);font-size:0.78rem;margin-top:8px;display:none;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-tech-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTechEntry()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ NEW PROJECT MODAL ══════════════ -->
+<div class="modal-backdrop" id="new-project-modal" onclick="if(event.target===this)closeModal('new-project-modal')">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h3>➕ New Project</h3>
+      <button class="modal-close" onclick="closeModal('new-project-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="opt-grid">
+
+        <!-- Project Name -->
+        <div class="opt-row">
+          <label>Project Name</label>
+          <input type="text" id="np-name" class="opt-input" style="width:260px;" placeholder="e.g. TXDALS25 Cebu Block A" />
+        </div>
+
+        <!-- IR / Non-IR -->
+        <div class="opt-row">
+          <label>Block Type</label>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text);">
+              <input type="radio" name="np-blocktype" id="np-non-ir" value="NON" checked onchange="npBlocktypeChange()" style="accent-color:var(--accent);width:16px;height:16px;">
+              Non-IR <span style="font-size:0.72rem;color:var(--text-muted);font-weight:400;">(auto-detects COMBO? column)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text);">
+              <input type="radio" name="np-blocktype" id="np-ir" value="IR" onchange="npBlocktypeChange()" style="accent-color:var(--amber);width:16px;height:16px;">
+              IR <span style="font-size:0.72rem;color:var(--text-muted);font-weight:400;">(×1.5 fix points)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- IR notice -->
+        <div id="np-ir-notice" style="display:none;padding:10px 14px;background:#fef3c7;border-radius:8px;border-left:3px solid var(--amber);font-size:0.78rem;color:#92400e;">
+          ⚡ <strong>IR Project:</strong> All fix task points will be multiplied by ×1.5. SQM is not used for IR projects.
+        </div>
+
+        <!-- Site -->
+        <div class="opt-row">
+          <label>Site</label>
+          <div class="opt-chips">
+            <div class="chip selected" data-group="np-site" data-val="Cebu" onclick="selectChip(this)">🏙 Cebu</div>
+            <div class="chip" data-group="np-site" data-val="Manila" onclick="selectChip(this)">🏙 Manila</div>
+          </div>
+        </div>
+
+        <!-- GSD -->
+        <div class="opt-row">
+          <label>GSD Resolution</label>
+          <div class="opt-chips">
+            <div class="chip" data-group="np-gsd" data-val="3in" onclick="selectChip(this)">3 in</div>
+            <div class="chip selected green" data-group="np-gsd" data-val="6in" onclick="selectChip(this)">6 in</div>
+            <div class="chip" data-group="np-gsd" data-val="9in" onclick="selectChip(this)">9 in</div>
+          </div>
+        </div>
+
+        <!-- Month / Year -->
+        <div class="opt-row">
+          <label>Month / Year</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="np-month" class="opt-input" style="width:120px;">
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+            <input type="number" id="np-year" class="opt-input" style="width:90px;" min="2020" max="2099" />
+          </div>
+        </div>
+
+        <!-- Dropzone -->
+        <div class="opt-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">File</label>
+          <div id="np-dropzone" onclick="document.getElementById('np-file-input').click()"
+            style="flex:1;border:2px dashed var(--border);border-radius:10px;background:#f7f9fc;padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;min-width:0;">
+            <input type="file" id="np-file-input" accept=".zip,.dbf" style="display:none" onchange="npFileChosen(this)" />
+            <div id="np-dz-icon" style="font-size:1.8rem;margin-bottom:6px;">📂</div>
+            <div id="np-dz-text" style="font-size:0.82rem;font-weight:600;color:#37474f;">Drop .dbf or .zip here</div>
+            <div id="np-dz-sub" style="font-size:0.72rem;color:#90a4ae;margin-top:3px;">or click to browse</div>
+          </div>
+        </div>
+
+      </div>
+      <p id="np-error" style="color:var(--red);font-size:0.78rem;margin-top:6px;display:none;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-project-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmNewProject()">⬆ Import &amp; Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DRILL-DOWN MODAL ══════════════ -->
+<div class="modal-backdrop" id="drilldown-modal" onclick="if(event.target===this)closeModal('drilldown-modal')">
+  <div class="modal" style="max-width:1100px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;padding-bottom:12px;">
+      <div>
+        <h3 id="dd-title">Source Records</h3>
+        <div id="dd-subtitle" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('drilldown-modal')">✕</button>
+    </div>
+    <!-- Formula card shown at top of drilldown -->
+    <div id="dd-formula-card" style="display:none;margin:0 24px 10px;padding:12px 16px;background:var(--blue-light);border-radius:10px;border-left:4px solid var(--accent);font-size:0.76rem;flex-shrink:0;">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:6px;font-size:0.8rem;">📐 How these points are calculated</div>
+      <div id="dd-formula-body" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;line-height:1.7;color:var(--text);"></div>
+    </div>
+    <!-- Summary strip -->
+    <div id="dd-summary-strip" style="display:none;flex-shrink:0;margin:0 24px 10px;display:flex;gap:10px;flex-wrap:wrap;"></div>
+    <div class="modal-body" style="flex:1;overflow:auto;padding:0 16px 12px;">
+      <div style="overflow-x:auto;">
+        <table class="qb-table" id="dd-table" style="font-size:0.75rem;">
+          <thead>
+            <tr id="dd-head"></tr>
+          </thead>
+          <tbody id="dd-body"></tbody>
+          <tfoot id="dd-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-shrink:0;padding:10px 16px;">
+      <span id="dd-count" style="font-size:0.78rem;color:var(--text-muted);flex:1;align-self:center;"></span>
+      <button class="btn btn-ghost" onclick="jumpToRowFromDrilldown()" id="dd-jump-btn" style="display:none">🔍 Show in Tasks</button>
+      <button class="btn btn-ghost" onclick="closeModal('drilldown-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ABOUT / FORMULA MODAL ══════════════ -->
+<div class="modal-backdrop" id="about-modal" onclick="if(event.target===this)closeModal('about-modal')">
+  <div class="modal" style="max-width:820px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <h3>📖 Formula Reference &amp; Calculation Logic</h3>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">Live values pulled from your current Settings — change anything in ⚙ Settings &amp; Roster and it reflects here</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('about-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="flex:1;overflow-y:auto;">
+
+      <!-- ① Point Sources -->
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">1</span>
+          Point Sources — what earns points &amp; how much
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+          <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+            <th style="padding:8px 12px;text-align:left;">Task Role</th>
+            <th style="padding:8px 12px;text-align:left;">Condition</th>
+            <th style="padding:8px 12px;text-align:right;">Base Pts</th>
+            <th style="padding:8px 12px;text-align:left;">Formula</th>
+          </tr></thead>
+          <tbody id="about-sources-body"></tbody>
+        </table>
+      </div>
+
+      <!-- ② Category × GSD table -->
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">2</span>
+          Fix Task Point Values — Category × GSD (editable in Settings)
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">Each fix round adds: <code style="background:var(--bg);padding:2px 6px;border-radius:4px;">catValue[cat][gsd] × irModifier</code> to the fix tech's total</div>
+        <div style="overflow-x:auto;">
+          <table style="border-collapse:collapse;font-size:0.78rem;min-width:400px;">
+            <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+              <th style="padding:8px 12px;">Cat</th>
+              <th style="padding:8px 12px;text-align:right;">3in</th>
+              <th style="padding:8px 12px;text-align:right;">4in</th>
+              <th style="padding:8px 12px;text-align:right;" id="about-gsd-highlight">6in ★</th>
+              <th style="padding:8px 12px;text-align:right;">9in</th>
+              <th style="padding:8px 12px;text-align:right;" id="about-ir-col">× IR (<span id="about-ir-val">1.5</span>)</th>
+            </tr></thead>
+            <tbody id="about-cat-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ③ Quality % formula -->
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">3</span>
+          Fix Quality % — how it's computed
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:0.78rem;">
+            <div style="font-weight:700;margin-bottom:8px;color:var(--accent);">Formula</div>
+            <code style="font-size:0.82rem;line-height:2;">Quality % = Fix ÷ (Fix + Refix + Warnings) × 100</code>
+            <div style="margin-top:10px;color:var(--text-muted);line-height:1.6;">
+              <b>Fix</b> = tasks where tech is FIX1_ID … FIX5_ID<br>
+              <b>Refix</b> = tasks with refix label (e.g. <i>i</i>) in RV columns<br>
+              <b>Warnings</b> = tasks with warn labels in warn columns
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:14px 16px;font-size:0.78rem;border:1px solid var(--border);">
+            <div style="font-weight:700;margin-bottom:8px;">Current detection labels</div>
+            <div id="about-detect-labels" style="line-height:1.8;color:var(--text-muted);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ Bonus formula -->
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">4</span>
+          Bonus Calculation — final PHP payout
+        </div>
+        <div style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:0.78rem;margin-bottom:10px;">
+          <div style="font-weight:700;margin-bottom:8px;color:var(--accent);">Standard formula</div>
+          <code style="font-size:0.84rem;">Bonus = TotalPoints × PHP_Multiplier × (QualityMod% ÷ 100)</code>
+          <div style="margin-top:8px;color:var(--text-muted);">QualityMod% is looked up from the Quality % Modifier table based on the tech's quality rate. PHP Multiplier is set in the Bonus Calculator panel.</div>
+        </div>
+        <div style="background:#fef3c7;border-radius:10px;padding:14px 16px;font-size:0.78rem;border-left:4px solid var(--amber);">
+          <div style="font-weight:700;margin-bottom:6px;color:#92400e;">★ Threshold bonus (overrides if quality ≥ threshold)</div>
+          <div id="about-threshold-text" style="color:#92400e;line-height:1.7;"></div>
+        </div>
+      </div>
+
+      <!-- ⑤ Quality modifier table preview -->
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;">5</span>
+          Quality % → Modifier Lookup (first 20 tiers shown)
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="border-collapse:collapse;font-size:0.78rem;">
+            <thead><tr style="background:var(--header-bg);color:var(--header-text);">
+              <th style="padding:7px 14px;">Quality % ≥</th>
+              <th style="padding:7px 14px;text-align:right;">Modifier</th>
+              <th style="padding:7px 14px;text-align:right;">Effective %</th>
+              <th style="padding:7px 14px;text-align:left;">Meaning</th>
+            </tr></thead>
+            <tbody id="about-quality-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ⑥ Missed / Rework note -->
+      <div style="background:#fef2f2;border-radius:10px;padding:14px 16px;font-size:0.78rem;border-left:4px solid var(--red);margin-bottom:8px;">
+        <div style="font-weight:700;margin-bottom:6px;color:var(--red);">⚠ Missed / Rework — attribution rule</div>
+        <div style="color:#7f1d1d;line-height:1.7;" id="about-miss-text"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer" style="flex-shrink:0;">
+      <span style="font-size:0.72rem;color:var(--text-muted);flex:1;">All values editable under ⚙ Settings &amp; Roster · Changes apply immediately to all calculations</span>
+      <button class="btn btn-ghost" onclick="closeModal('about-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-backdrop" id="save-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header"><h3>💾 Save Project</h3></div>
+    <div class="modal-body">
+      <input type="text" id="project-name-input" placeholder="Project name (e.g. TXDALS25 Cebu 6in Block A)" maxlength="80" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.85rem;outline:none;"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('save-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p id="loading-msg">Parsing fixpoint records…</p>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DEFAULT MODIFIER TABLES  (from PDF + script.js)
+// ═══════════════════════════════════════════════════════════════
+const PDF_DEFAULTS = {
+  // ── Bonus tiers (from script.js DEFAULT_BONUS_TIERS) ────────
+  bonusTiers: [
+    {quality:100,bonus:1.20},{quality:99.5,bonus:1.18},{quality:99,bonus:1.16},{quality:98.5,bonus:1.14},{quality:98,bonus:1.12},
+    {quality:97.5,bonus:1.10},{quality:97,bonus:1.08},{quality:96.5,bonus:1.06},{quality:96,bonus:1.04},{quality:95.5,bonus:1.02},
+    {quality:95,bonus:1.00},{quality:94.5,bonus:0.99},{quality:94,bonus:0.98},{quality:93.5,bonus:0.97},{quality:93,bonus:0.96},
+    {quality:92.5,bonus:0.95},{quality:92,bonus:0.94},{quality:91.5,bonus:0.93},{quality:91,bonus:0.91},{quality:90.5,bonus:0.90},
+    {quality:90,bonus:0.88},{quality:89.5,bonus:0.87},{quality:89,bonus:0.85},{quality:88.5,bonus:0.83},{quality:88,bonus:0.80},
+    {quality:87.5,bonus:0.78},{quality:87,bonus:0.75},{quality:86.5,bonus:0.73},{quality:86,bonus:0.70},{quality:85.5,bonus:0.68},
+    {quality:85,bonus:0.66},{quality:84.5,bonus:0.64},{quality:84,bonus:0.62},{quality:83.5,bonus:0.60},{quality:83,bonus:0.57},
+    {quality:82.5,bonus:0.55},{quality:82,bonus:0.50},{quality:81.5,bonus:0.45},{quality:81,bonus:0.40},{quality:80.5,bonus:0.35},
+    {quality:80,bonus:0.30},{quality:79.5,bonus:0.25},{quality:79,bonus:0.20},{quality:78.5,bonus:0.15},{quality:78,bonus:0.10},
+    {quality:77.5,bonus:0.05},
+  ],
+
+  // ── Calculation settings (from script.js DEFAULT_CALCULATION_SETTINGS) ──
+  calcSettings: {
+    irModifierValue: 1.5,
+    points: { qc:0.125, i3qa:0.08333333333333333, rv1:0.2, rv1_combo:0.25, rv2:0.5 },
+    categoryValues: {
+      1:{  "3in":2.19,"4in":2.19,"6in":2.19,"9in":0.99},
+      2:{  "3in":5.86,"4in":5.86,"6in":5.86,"9in":2.07},
+      3:{  "3in":7.44,"4in":7.44,"6in":7.44,"9in":2.78},
+      4:{  "3in":2.29,"4in":2.29,"6in":2.29,"9in":1.57},
+      5:{  "3in":1.55,"4in":1.55,"6in":1.55,"9in":0.60},
+      6:{  "3in":1.84,"4in":1.84,"6in":1.84,"9in":0.78},
+      7:{  "3in":1.00,"4in":1.00,"6in":1.00,"9in":1.00},
+      8:{  "3in":3.74,"4in":3.74,"6in":3.74,"9in":3.74},
+      9:{  "3in":1.73,"4in":1.73,"6in":1.73,"9in":1.73},
+    },
+  },
+
+  // ── SQM / Density / Bonus multiplier tables (from PDF) ──────
+  sqmMultipliers: [
+    {lo:1,    hi:1999,  val:244.00},{lo:2000,hi:2499,val:10.00},{lo:2500,hi:2999,val:10.50},
+    {lo:3000, hi:3499,  val:11.00},{lo:3500,hi:3999,val:11.50},{lo:4000,hi:4499,val:12.00},
+    {lo:4500, hi:4999,  val:12.50},{lo:5000,hi:5499,val:13.00},{lo:5500,hi:5999,val:13.50},
+    {lo:6000, hi:6499,  val:14.00},{lo:6500,hi:6999,val:14.50},{lo:7000,hi:7499,val:15.00},
+    {lo:7500, hi:7999,  val:15.50},{lo:8000,hi:999999,val:16.00},
+  ],
+  densityModifiers: [
+    {lo:0,   hi:99,    val:-1.5},{lo:100, hi:249,  val:-1.0},{lo:250, hi:499,  val:-0.5},
+    {lo:500, hi:749,   val:0},   {lo:750, hi:999,  val:0.5}, {lo:1000,hi:1499, val:1.0},
+    {lo:1500,hi:999999,val:1.5},
+  ],
+  bonusFloor: 9.5,
+
+  // ── Bonus Thresholds (overrides per-tech if quality % met) ──
+  bonusThresholds: [
+    { quality: 100,  bonus: 120 },
+    { quality: 99.5, bonus: 118 },
+  ],
+
+  // ── Detection rules (from script.js DEFAULT_COUNTING_SETTINGS) ──
+  detect: {
+    taskColumns: { qc:['qc_id'], i3qa:['i3qa_id'], rv1:['rv1_id'], rv2:['rv2_id'] },
+    triggers: {
+      refix:     { labels:['i'],                       columns:['rv1_label','rv2_label','rv3_label'] },
+      miss:      { labels:['m','c'],                   columns:['i3qa_label','rv1_label','rv2_label','rv3_label'] },
+      warning:   { labels:['b','c','d','e','f','g','i'],columns:['r1_warn','r2_warn','r3_warn','r4_warn'] },
+      qcPenalty: { labels:['m','e'],                   columns:['i3qa_label'] },
+    },
+    // Shorthand aliases used by countRefixes / hasLabel helpers
+    get refixLabels(){ return this.triggers.refix.labels; },
+    get refixCols(){   return this.triggers.refix.columns.map(c=>c.toUpperCase()); },
+    get missLabels(){  return this.triggers.miss.labels; },
+    get warnLabels(){  return this.triggers.warning.labels; },
+    get warnCols(){    return this.triggers.warning.columns.map(c=>c.toUpperCase()); },
+    get qcPenLabels(){ return this.triggers.qcPenalty.labels; },
+    get qcPenCols(){   return this.triggers.qcPenalty.columns.map(c=>c.toUpperCase()); },
+  },
+};
+
+// Live settings (copies of defaults, user-editable)
+let S = JSON.parse(JSON.stringify(PDF_DEFAULTS));
+
+// ═══════════════════════════════════════════════════════════════
+// TECH ROSTER
+// ═══════════════════════════════════════════════════════════════
+let TECH_ROSTER = {
+  '7092RN':{name:'Romiel Nuevo',team:'Team Cherrie',teamNum:'T_63'},
+  '7037HP':{name:'Henry Patoc',team:'Team Cherrie',teamNum:'T_63'},
+  '7089RR':{name:'Ravin Louis Relador',team:'Team Cherrie',teamNum:'T_63'},
+  '7102JD':{name:'John Kenneth Dueñas',team:'Team Cherrie',teamNum:'T_63'},
+  '7170WS':{name:'Warren Salogaol',team:'Team Cherrie',teamNum:'T_63'},
+  '7040JP':{name:'Jose Poro III',team:'Team Cherrie',teamNum:'T_63'},
+  '7159MC':{name:'Ma. Angelica Cagigas',team:'Team Cherrie',teamNum:'T_63'},
+  '7161KA':{name:'Kent C. Agraviador',team:'Team Cherrie',teamNum:'T_63'},
+  '7168JS':{name:'Jennifer S. Solayao',team:'Team Cherrie',teamNum:'T_63'},
+  '7158JD':{name:'Junie S. Dadol',team:'Team Cherrie',teamNum:'T_63'},
+  '7167AD':{name:'Almer B. Dela Cruz',team:'Team Cherrie',teamNum:'T_63'},
+  '7178MD':{name:'Mary Mae Dagwayan',team:'Team Cherrie',teamNum:'T_63'},
+  '4297RQ':{name:'Ralph B. Quinto',team:'Team Barbie',teamNum:'T_115'},
+  '7086LP':{name:'Lemuel Presbitero',team:'Team Barbie',teamNum:'T_115'},
+  '7087LA':{name:'Lorie Mae Año',team:'Team Barbie',teamNum:'T_115'},
+  '7088MA':{name:'Michelle Marie D. Alburo',team:'Team Barbie',teamNum:'T_115'},
+  '7091HA':{name:'Harvy Acevedo',team:'Team Barbie',teamNum:'T_115'},
+  '7179KB':{name:'King Nino Barba',team:'Team Barbie',teamNum:'T_115'},
+  '7099SS':{name:'Sallemie Solon',team:'Team Barbie',teamNum:'T_115'},
+  '7171AL':{name:'Alfe Marie G. Latras',team:'Team Barbie',teamNum:'T_115'},
+  '7311JT':{name:'Joseph M. Tabada',team:'Team Barbie',teamNum:'T_115'},
+  '7173ES':{name:'Earl Ryan Y. Santiago',team:'Team Barbie',teamNum:'T_115'},
+  '7175JP':{name:'Jumbo S. Paanod Jr.',team:'Team Barbie',teamNum:'T_115'},
+  '7084LQ':{name:'Lowel K. Quilinguen',team:'Team Barbie',teamNum:'T_115'},
+  '4044AM':{name:'Anna Mae Mencho A. Macaraya',team:'Team Barbie',teamNum:'T_115'},
+  '4488MD':{name:'Maricris de Gracia',team:'Team Noel',teamNum:'T_57'},
+  '7096AV':{name:'Ale-June Villacencio',team:'Team Noel',teamNum:'T_57'},
+  '1173RR':{name:'Reuel Andrew Roque',team:'Team Noel',teamNum:'T_57'},
+  '4489EA':{name:'Everly Apurado',team:'Team Noel',teamNum:'T_57'},
+  '7103RE':{name:'Roberto Ebarita Jr.',team:'Team Noel',teamNum:'T_57'},
+  '7043RP':{name:'Randolf Potot',team:'Team Noel',teamNum:'T_57'},
+  '7093MG':{name:'Michael Allien Getigan',team:'Team Noel',teamNum:'T_57'},
+  '7166CR':{name:'Carl Anthony Riñen',team:'Team Noel',teamNum:'T_57'},
+  '7174MC':{name:'Michael A. Catadman',team:'Team Noel',teamNum:'T_57'},
+  '7090JA':{name:'John Russian Arches',team:'Team Noel',teamNum:'T_57'},
+  '7165GR':{name:'Ghee Ram N. Racaza',team:'Team Noel',teamNum:'T_57'},
+  '7176CC':{name:'Clarfen D. Campilanan',team:'Team Noel',teamNum:'T_57'},
+  '7095KA':{name:'Kirby L. Adobas',team:'Team Noel',teamNum:'T_57'},
+  '7105JH':{name:'Joel Himatay',team:'Team David',teamNum:'T_116'},
+  '7107RA':{name:'Reymon Alipin',team:'Team David',teamNum:'T_116'},
+  '7108RS':{name:'Ryan Sevilla',team:'Team David',teamNum:'T_116'},
+  '7109JB':{name:'John Anderson Balmori',team:'Team David',teamNum:'T_116'},
+  '7110RC':{name:'Robeneil Cabunilas',team:'Team David',teamNum:'T_116'},
+  '7111OE':{name:'Orlando Jr. Enriquez',team:'Team David',teamNum:'T_116'},
+  '7112RL':{name:'Reymark Laranjo',team:'Team David',teamNum:'T_116'},
+  '7113SR':{name:'Sherwin Rupal',team:'Team David',teamNum:'T_116'},
+  '7114AR':{name:'Albrenz Rosalejos',team:'Team David',teamNum:'T_116'},
+  '7254LD':{name:'Laurence Damole',team:'Team David',teamNum:'T_116'},
+  '7185JG':{name:'John Mel Gino',team:'Team David',teamNum:'T_116'},
+  '7181RL':{name:'Reynaldo, Jr. Laranjo',team:'Team David',teamNum:'T_116'},
+  '7180JR':{name:'Jerico Rago',team:'Team David',teamNum:'T_116'},
+  '7186JS':{name:'Jumel Seno',team:'Team David',teamNum:'T_116'},
+  '7249SS':{name:'Serg Sembrano',team:'Team Jeave',teamNum:'T_123'},
+  '7236LE':{name:'Lorens Christopher Ebrado',team:'Team Jeave',teamNum:'T_123'},
+  '4426KV':{name:'Kenneth Lester Villajos',team:'Team Jeave',teamNum:'T_123'},
+  '4472JS':{name:'Sison, John Vincent Estopito',team:'Team Jeave',teamNum:'T_123'},
+  '4475JT':{name:'Joana May Taboada',team:'Team Jeave',teamNum:'T_123'},
+  '7240HH':{name:'Hyacint Hortelano',team:'Team Jeave',teamNum:'T_123'},
+  '7039NO':{name:'Nazareno Oppus',team:'Team Jeave',teamNum:'T_123'},
+  '7231NR':{name:'Negel Roloma',team:'Team Jeave',teamNum:'T_123'},
+  '7244AA':{name:'Arjohn Abapo',team:'Team Jeave',teamNum:'T_123'},
+  '7247JA':{name:'Jayson Aliser',team:'Team Jeave',teamNum:'T_123'},
+  '7248AA':{name:'Allan Paul Alforque',team:'Team Jeave',teamNum:'T_123'},
+  '7251JD':{name:'Jan Dominic Dela Cruz',team:'Team Jeave',teamNum:'T_123'},
+  '7314VP':{name:'Vince April Pitogo',team:'Team Jeave',teamNum:'T_123'},
+  '7042NB':{name:'Nikki Carlos Booc',team:'Team Nikki',teamNum:'T_114'},
+  '4283JP':{name:'Janriel Paanod',team:'Team Nikki',teamNum:'T_114'},
+  '7234CS':{name:'Christian Suico',team:'Team Nikki',teamNum:'T_114'},
+  '7313MB':{name:'Mark Kg Barong',team:'Team Nikki',teamNum:'T_114'},
+  '7036RB':{name:'Rodrigo Basnillo',team:'Team Nikki',teamNum:'T_114'},
+  '4478JV':{name:'Jervin Villocino',team:'Team Nikki',teamNum:'T_114'},
+  '7310DR':{name:'Dan Niel Rapas',team:'Team Nikki',teamNum:'T_114'},
+  '7239EO':{name:'Eric Jason Omega',team:'Team Nikki',teamNum:'T_114'},
+  '4477PT':{name:'Pacifico Tejam',team:'Team Nikki',teamNum:'T_114'},
+  '7251DJ':{name:'Jan Dominic Dela Cruz (Nikki)',team:'Team Nikki',teamNum:'T_114'},
+  '7233JP':{name:'Jeobenail li Parame',team:'Team Nikki',teamNum:'T_114'},
+  '4135RC':{name:'Cantiveros, Ritche Bayo',team:'Team Nikki',teamNum:'T_114'},
+  '7315CR':{name:'Christiane Repunte',team:'Team Nikki',teamNum:'T_114'},
+  '7243JC':{name:'John Cañete',team:'Team Nikki',teamNum:'T_114'},
+  '4474HS':{name:'Soroño, Humfrey Dave Viaña',team:'Team Jack',teamNum:'T_64'},
+  '4492CP':{name:'Christian Pontiano',team:'Team Jack',teamNum:'T_64'},
+  '4421AT':{name:'Anthony Talledo',team:'Team Jack',teamNum:'T_64'},
+  '7237ML':{name:'Michael Bryan Lambo',team:'Team Jack',teamNum:'T_64'},
+  '4481JV':{name:'Jasmin Villocino',team:'Team Jack',teamNum:'T_64'},
+  '7316NT':{name:'Niel Fred Tabar',team:'Team Jack',teamNum:'T_64'},
+  '7245SC':{name:'Sergio Cuizon Jr.',team:'Team Jack',teamNum:'T_64'},
+  '4476JR':{name:'Rico, Jefrey Labajo',team:'Team Jack',teamNum:'T_64'},
+  '7246AJ':{name:'Arvin Jasmin',team:'Team Jack',teamNum:'T_64'},
+  '7241DM':{name:'Dejie Monterde',team:'Team Jack',teamNum:'T_64'},
+  '4435AC':{name:'Allan Codina',team:'Team Jack',teamNum:'T_64'},
+  '7242FV':{name:'Francis Anthony Villarin',team:'Team Jack',teamNum:'T_64'},
+  '2274JD':{name:'Jacky Dimla',team:'Team Jack',teamNum:'T_64'},
+  '7182RP':{name:'Ronaldo Plasabas',team:'Team Angelico',teamNum:'T_122'},
+  '7183EE':{name:'Eduardo Jr Espina',team:'Team Angelico',teamNum:'T_122'},
+  '7184WG':{name:'Winston Garcia',team:'Team Angelico',teamNum:'T_122'},
+  '7187CN':{name:'Camela Nuñeza',team:'Team Angelico',teamNum:'T_122'},
+  '7188AA':{name:'Angelica Abella',team:'Team Angelico',teamNum:'T_122'},
+  '7189CF':{name:'Cynthia Fernandez',team:'Team Angelico',teamNum:'T_122'},
+  '7255AL':{name:'Abel Lacida',team:'Team Angelico',teamNum:'T_122'},
+  '7256VR':{name:'Von Kristofer Recilla',team:'Team Angelico',teamNum:'T_122'},
+  '7257AJ':{name:'Jabagat Allan',team:'Team Angelico',teamNum:'T_122'},
+  '7258AM':{name:'Angelo Montaño',team:'Team Angelico',teamNum:'T_122'},
+  '7259MA':{name:'Mark Adrian Asis',team:'Team Angelico',teamNum:'T_122'},
+  '7260HP':{name:'Harold James Paduga',team:'Team Angelico',teamNum:'T_122'},
+  '7261PA':{name:'Patrick Aplicador',team:'Team Angelico',teamNum:'T_122'},
+  '7262AP':{name:'Arnold Louie Pegoro',team:'Team Angelico',teamNum:'T_122'},
+  '7253NR':{name:'Niño Yuson Ramil',team:'Team Angelico',teamNum:'T_122'},
+};
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let allRows=[], filtered=[], techRows=[], filteredTech=[];
+let sortKey='total_points', sortDir=-1;
+let techSortKey='points', techSortDir=-1;
+let currentPage=1, currentView='tasks';
+let colFilters={};
+let currentProjectName='';
+let currentRawFile=null;
+let currentBonusMultiplier=9.5;
+let PAGE_SIZE=100;
+
+// Import settings state
+let importSettings = {
+  site: 'Cebu', gsd: '6in', blocktype: 'auto',
+  month: new Date().toLocaleString('en-US',{month:'long'}), year: new Date().getFullYear(), sqm: 1332, name: ''
+};
+let pendingFile = null; // held while import modal is open
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function getCatGsdValue(cat, gsd) {
+  return S.calcSettings.categoryValues[Number(cat)]?.[gsd] || 0;
+}
+function getSqmMultiplier(sqm) {
+  const s = Number(sqm)||0;
+  for (const r of S.sqmMultipliers) if (s>=r.lo && s<=r.hi) return r.val;
+  return S.bonusFloor;
+}
+function getDensityMod(density) {
+  for (const r of S.densityModifiers) if (density>=r.lo && density<=r.hi) return r.val;
+  return 0;
+}
+function getQualityPct(qp) {
+  // Use bonus tiers from script.js (returns bonus as fraction, e.g. 1.0 = 100%)
+  return (calculateQualityModifier(qp) * 100);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DETECTION HELPERS  (settings-driven)
+// ═══════════════════════════════════════════════════════════════
+function splitLabels(str){ return str.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean); }
+function hasLabel(raw, cols, labels){
+  const lset = new Set(labels.map(l=>l.toLowerCase()));
+  return cols.some(col=>{
+    const v=(raw[col]||raw[col.toUpperCase()]||'').trim().toLowerCase();
+    return v && lset.has(v);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALCULATOR  — ported from script.js Calculator.parseRawData
+// Handles: fix point awards, refix transfers, AFP tasks,
+//          miss-conditional awarding, QC penalty transfer to i3QA,
+//          per-category breakdowns, warning detection
+// ═══════════════════════════════════════════════════════════════
+function buildTechStats(rawRecords) {
+  const isFixTaskIR = importSettings.blocktype === 'IR';
+  const gsd = importSettings.gsd || '6in';
+  const cs  = S.calcSettings;   // calculation settings (points, categoryValues, irModifierValue)
+  const det = S.detect;
+
+  const techStats = {};
+  const TECH_REGEX = /^\d{4}[a-zA-Z]{2}$/;
+
+  // ── 1. Discover all techs in the data ───────────────────────
+  rawRecords.forEach(r => {
+    Object.keys(r).forEach(k => {
+      if (k.toUpperCase().endsWith('_ID')) {
+        const tid = (r[k]||'').trim().toUpperCase();
+        if (tid && TECH_REGEX.test(tid) && !techStats[tid]) {
+          const info = TECH_ROSTER[tid] || {};
+          const categoryCounts = {};
+          for (let i=1;i<=9;i++) categoryCounts[i]={primary:0,i3qa:0,afp:0,rv:0};
+          techStats[tid] = {
+            id: tid,
+            name: info.name || tid,
+            team: info.team || 'Unknown Team',
+            teamNum: info.teamNum || '—',
+            month: `${importSettings.month} ${importSettings.year} – ${importSettings.site}`,
+            points: 0, fixTasks: 0, afpTasks: 0, refixTasks: 0, missedTasks: 0,
+            qcTasks: 0, i3qaTasks: 0, rvTasks: 0, warnings: [],
+            categoryCounts,
+            pointsBreakdown: { fix:0, qc:0, i3qa:0, rv:0, qcTransfer:0 },
+            _src: { initial:[], i3qa:[], rv:[], fix:[], missed:[], refix:[], warn:[] },
+          };
+        }
+      }
+    });
+  });
+
+  // ── 2. Process each fixpoint row ────────────────────────────
+  rawRecords.forEach(r => {
+    const get = col => (r[col] || r[col.toUpperCase()] || '');
+    const isComboIR = importSettings.blocktype === 'IR';
+
+    const fixIds = [1,2,3,4,5].map(i => get(`FIX${i}_ID`).trim().toUpperCase()).map(id => TECH_REGEX.test(id) ? id : null);
+
+    // Helper: award fix category points to a tech
+    const processFixTech = (techId, catSources) => {
+      if (!techId || !techStats[techId]) return;
+      catSources.forEach(source => {
+        if (source.isRQA && source.sourceType === 'afp') techStats[techId].afpTasks++;
+        const labelValue = source.label ? get(source.label).trim().toUpperCase() : null;
+        if (source.condition && !source.condition(labelValue)) return;
+        const catValue = parseInt(get(source.cat));
+        if (!isNaN(catValue) && catValue >= 1 && catValue <= 9) {
+          techStats[techId].fixTasks++;
+          techStats[techId]._src.fix.push(r);
+          // If this row was flagged with a miss label, count it as missed
+          if (source.condition && labelValue) { techStats[techId].missedTasks++; techStats[techId]._src.missed.push(r); }
+          const pointValue = (cs.categoryValues[catValue]?.[gsd]) || 0;
+          const pts = pointValue * (isComboIR ? cs.irModifierValue : 1);
+          techStats[techId].points += pts;
+          techStats[techId].pointsBreakdown.fix += pts;
+          if (techStats[techId].categoryCounts[catValue])
+            techStats[techId].categoryCounts[catValue][source.sourceType]++;
+        }
+      });
+    };
+
+    // Helper: add non-fix task points
+    const addPoints = (techId, pts, field, taskType) => {
+      if (!techId || !techStats[techId]) return;
+      techStats[techId].points += pts;
+      techStats[techId].pointsBreakdown[field] += pts;
+      if (taskType) {
+        techStats[techId][`${taskType}Tasks`]++;
+        const srcKey = taskType==='qc'?'initial': taskType==='i3qa'?'i3qa': taskType==='rv'?'rv': null;
+        if (srcKey) techStats[techId]._src[srcKey].push(r);
+      }
+    };
+
+    // Helper: refix trigger check
+    const isRefixTriggered = (reviewLabelCol, fixIndex) => {
+      const label = get(reviewLabelCol).trim().toLowerCase();
+      return label && det.refixLabels.some(l => label.includes(l)) && !!fixIds[fixIndex];
+    };
+
+    // Fix point map: mirrors script.js fixPointMap
+    const fixPointMap = [
+      { cat:'CATEGORY',  review:'RV1_LABEL', refixTechIndex:1, afpStat:'AFP1_STAT', afpCat:'AFP1_CAT', i3qaCat:'I3QA_CAT', isPrimary:true },
+      { cat:'RV1_CAT',   review:'RV2_LABEL', refixTechIndex:2, afpStat:'AFP2_STAT', afpCat:'AFP2_CAT' },
+      { cat:'RV2_CAT',   review:'RV3_LABEL', refixTechIndex:3, afpStat:'AFP3_STAT', afpCat:'AFP3_CAT' },
+      { cat:'RV3_CAT',   review:null,        refixTechIndex:null },
+    ];
+
+    fixPointMap.forEach((fix, i) => {
+      const fixTechId = fixIds[i];
+      if (!fixTechId) return;
+
+      const refixTriggered = fix.review && isRefixTriggered(fix.review, i);
+
+      if (!refixTriggered) {
+        // ── Award points to fixer ──
+        const catSources = [];
+        // AFP (RQA-approved)
+        if (fix.afpStat && get(fix.afpStat).trim().toUpperCase() === 'AA')
+          catSources.push({ cat:fix.afpCat, isRQA:true, sourceType:'afp' });
+
+        if (fix.isPrimary) {
+          catSources.push({ cat:fix.cat, sourceType:'primary' });
+          // i3QA points only if miss/correct label
+          catSources.push({ cat:fix.i3qaCat, label:'I3QA_LABEL',
+            condition: v => v && det.missLabels.some(l => v.includes(l.toUpperCase())),
+            sourceType:'i3qa' });
+        } else if (fix.cat) {
+          const reviewCol = i===1?'RV1_LABEL': i===2?'RV2_LABEL':'RV3_LABEL';
+          catSources.push({ cat:fix.cat, label:reviewCol,
+            condition: v => v && det.missLabels.some(l => v.includes(l.toUpperCase())),
+            sourceType:'rv' });
+        }
+        processFixTech(fixTechId, catSources);
+
+      } else {
+        // ── Refix: penalise original, transfer points to refix tech ──
+        if (techStats[fixTechId]) { techStats[fixTechId].refixTasks++; techStats[fixTechId]._src.refix.push(r); }
+
+        const refixTechId = fixIds[fix.refixTechIndex];
+        const catValue = parseInt(get(fix.cat));
+        if (refixTechId && techStats[refixTechId] && !isNaN(catValue) && catValue>=1 && catValue<=9) {
+          const pointValue = (cs.categoryValues[catValue]?.[gsd]) || 0;
+          const pts = pointValue * (isComboIR ? cs.irModifierValue : 1);
+          techStats[refixTechId].points += pts;
+          techStats[refixTechId].pointsBreakdown.fix += pts;
+          techStats[refixTechId].fixTasks++;
+          if (techStats[refixTechId].categoryCounts[catValue])
+            techStats[refixTechId].categoryCounts[catValue]['primary']++;
+        }
+      }
+    });
+
+    // ── QC task ──────────────────────────────────────────────
+    det.taskColumns.qc.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.qc, 'qc', 'qc'));
+
+    // ── i3QA task ────────────────────────────────────────────
+    det.taskColumns.i3qa.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.i3qa, 'i3qa', 'i3qa'));
+
+    // ── RV tasks ─────────────────────────────────────────────
+    det.taskColumns.rv1.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), isComboIR ? cs.points.rv1_combo : cs.points.rv1, 'rv', 'rv'));
+    det.taskColumns.rv2.forEach(c => addPoints(get(c.toUpperCase()).trim().toUpperCase(), cs.points.rv2, 'rv', 'rv'));
+
+    // ── QC Penalty — deduct from QC tech, transfer to i3QA tech ─────────────
+    {
+      const penCols = det.triggers.qcPenalty.columns;
+      const penLabels = det.triggers.qcPenalty.labels;
+      const isPenalty = penCols.some(c => {
+        const v = get(c.toUpperCase()).trim().toLowerCase();
+        return v && penLabels.includes(v);
+      });
+      if (isPenalty) {
+        const qcId = get('QC_ID').trim().toUpperCase();
+        const i3qaId = get('I3QA_ID').trim().toUpperCase();
+        // Deduct 1/8 from QC tech
+        if (qcId && techStats[qcId]) {
+          techStats[qcId].points -= cs.points.qc;
+          techStats[qcId].pointsBreakdown.qc -= cs.points.qc;
+        }
+        // Transfer those points to i3QA tech
+        if (i3qaId && techStats[i3qaId]) {
+          techStats[i3qaId].points += cs.points.qc;
+          techStats[i3qaId].pointsBreakdown.qcTransfer += cs.points.qc;
+        }
+      }
+    }
+
+    // ── Warning detection ─────────────────────────────────────
+    det.triggers.warning.columns.forEach((c, i) => {
+      if (det.triggers.warning.labels.includes(get(c.toUpperCase()).trim().toLowerCase())) {
+        const fixTechId = fixIds[i];
+        if (fixTechId && techStats[fixTechId]) { techStats[fixTechId].warnings.push({}); techStats[fixTechId]._src.warn.push(r); }
+      }
+    });
+  });
+
+  return Object.values(techStats).map(t => {
+    const denom = t.fixTasks + t.refixTasks + t.warnings.length;
+    const qp    = denom > 0 ? (t.fixTasks / denom) * 100 : 0;
+    const qualityMod = calculateQualityModifier(qp);
+    // Check bonus thresholds — if tech meets a threshold, use that PHP multiplier (flat, no extra quality mod)
+    const thresholdBonus = getThresholdBonus(qp);
+    const effectiveMult = thresholdBonus !== null ? thresholdBonus : currentBonusMultiplier;
+    // Alias to match existing renderTechTable column names
+    t.initial       = t.qcTasks;
+    t.i3qa          = t.i3qaTasks;
+    t.rv            = t.rvTasks;
+    t.fix           = t.fixTasks;
+    t.refix         = t.refixTasks;
+    t.warn          = t.warnings.length;
+    t.missed        = t.missedTasks;
+    t.qp            = qp;
+    t.qualityPctMod = Math.round(qualityMod * 100 * 100) / 100;
+    t.bonusMultiplier = effectiveMult;
+    t.thresholdApplied = thresholdBonus !== null;
+    // thresholdBonus is a % (e.g. 120 = 120%) applied to base PHP multiplier
+    t.totalBonus = thresholdBonus !== null
+      ? t.points * currentBonusMultiplier * (thresholdBonus / 100)
+      : t.points * currentBonusMultiplier * qualityMod;
+    return t;
+  });
+}
+
+// Quality modifier lookup from bonus tiers
+function calculateQualityModifier(qualityRate) {
+  return S.bonusTiers.find(tier => qualityRate >= tier.quality)?.bonus || 0;
+}
+
+// Bonus threshold lookup — returns override PHP multiplier if tech meets threshold, else null
+function getThresholdBonus(qualityRate) {
+  if (!S.bonusThresholds || !S.bonusThresholds.length) return null;
+  const sorted = [...S.bonusThresholds].sort((a,b) => b.quality - a.quality);
+  for (const t of sorted) if (qualityRate >= t.quality) return t.bonus;
+  return null;
+}
+
+// Legacy per-row helpers (still used for tasks table display columns)
+function countRefixes(rec){
+  let n=0;
+  for(let i=1;i<=5;i++) if(rec[`ZFIX${i}_ID`]) n++;
+  S.detect.refixCols.forEach(col=>{
+    const techIdCol=col.replace(/_LABEL$/i,'_ID');
+    if(rec[techIdCol] && hasLabel(rec,[col],S.detect.refixLabels)) n++;
+  });
+  return n;
+}
+function countWarnings(rec){
+  let n=0;
+  S.detect.warnCols.forEach((col,idx)=>{
+    const rvCol=`RV${idx+1}_ID`;
+    if(rec[rvCol] && hasLabel(rec,[col],S.detect.warnLabels)) n++;
+  });
+  return n;
+}
+function countRVTasks(rec){let n=0;for(let i=1;i<=4;i++)if(rec[`RV${i}_ID`])n++;return n;}
+function countFixTasks(rec){let n=0;for(let i=1;i<=5;i++)if(rec[`FIX${i}_ID`])n++;return n;}
+
+// Legacy per-row point estimate (for tasks table total_points column only)
+function calcPoints(rec){
+  const cs = S.calcSettings;
+  const cat = parseInt(rec['CATEGORY']||0);
+  const isIR = importSettings.blocktype==='IR';
+  const gsdVal = (cs.categoryValues[cat]?.[importSettings.gsd]) || 0;
+  const irM = isIR ? cs.irModifierValue : 1.0;
+  let pts = 0;
+  if (rec['QC_ID']) pts += cs.points.qc;
+  if (rec['I3QA_ID']) pts += cs.points.i3qa;
+  for(let i=1;i<=5;i++) if(rec[`FIX${i}_ID`]) pts += gsdVal * irM;
+  if (rec['RV1_ID']) pts += isIR ? cs.points.rv1_combo : cs.points.rv1;
+  for(let i=2;i<=4;i++) if(rec[`RV${i}_ID`]) pts += cs.points.rv2;
+  return Math.round(pts*10000)/10000;
+}
+
+function processRecords(raw) {
+  return raw.map(r=>({
+    uid:r['UID']||'',
+    category:r['CATEGORY']||'',
+    ir: importSettings.blocktype==='IR'?'IR':(r['COMBO?']==='Y'?'COMBO':'N'),
+    qc_id:r['QC_ID']||'',
+    i3qa_id:r['I3QA_ID']||'',
+    i3qa_label:r['I3QA_LABEL']||'',
+    fix1_id:r['FIX1_ID']||'',
+    fix1_date:r['FIX1_DATE']||'',
+    fixed1:r['FIXED1?']||'',
+    rv1_id:r['RV1_ID']||'',
+    rv1_label:r['RV1_LABEL']||'',
+    qa1_id:r['QA1_ID']||'',
+    qa1_label:r['QA1_LABEL']||'',
+    zfix_count:countRefixes(r),
+    warn_count:countWarnings(r),
+    total_points:calcPoints(r),
+    rv_count:countRVTasks(r),
+    fix_count:countFixTasks(r),
+    _raw:r
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TECH SUMMARY  — points attributed to the tech who did THAT task
+// ═══════════════════════════════════════════════════════════════
+function buildTechSummary(rows) {
+  const D = S.detect;
+  const map={};
+  const ensure=id=>{
+    if(!map[id]){
+      const info=TECH_ROSTER[id]||{};
+      map[id]={id,name:info.name||id,team:info.team||'Unknown Team',
+        teamNum:info.teamNum||'—',month:`${importSettings.month} ${importSettings.year} – ${importSettings.site}`,
+        initial:0,i3qa:0,rv:0,fix:0,missed:0,refix:0,warn:0,points:0,
+        _src:{initial:[],i3qa:[],rv:[],fix:[],missed:[],refix:[],warn:[]}};
+    }
+  };
+
+  rows.forEach(r=>{
+    const raw = r._raw;
+    const cat = raw['CATEGORY']||'';
+    let isIR;
+    if(importSettings.blocktype==='IR') isIR=true;
+    else isIR=false;
+    const gsdVal = getCatGsdValue(cat, importSettings.gsd);
+    const irM = isIR ? S.calcSettings.irModifierValue : 1.0;
+
+    // ── QC / initial tagging ──────────────────────────────────
+    // Points for QC task always go to the QC tech
+    if(r.qc_id){
+      ensure(r.qc_id);
+      map[r.qc_id].initial++;
+      map[r.qc_id]._src.initial.push(r);
+      map[r.qc_id].points += S.calcSettings.points.qc;
+    }
+
+    // ── i3QA ─────────────────────────────────────────────────
+    // Points for i3QA task go only to the i3QA tech
+    if(r.i3qa_id){
+      ensure(r.i3qa_id);
+      map[r.i3qa_id].i3qa++;
+      map[r.i3qa_id]._src.i3qa.push(r);
+      map[r.i3qa_id].points += S.calcSettings.points.i3qa;
+    }
+
+    // ── Fix tasks ─────────────────────────────────────────────
+    // Each fix round's points go to that round's fix tech
+    for(let i=1;i<=5;i++){
+      const f=raw[`FIX${i}_ID`];
+      if(f){
+        ensure(f);
+        map[f].fix++;
+        map[f]._src.fix.push(r);
+        map[f].points += gsdVal * irM;
+      }
+    }
+
+    // ── Missed / Rework ───────────────────────────────────────
+    // A row is missed/rework when I3QA_LABEL = 'M' (case-insensitive).
+    // The miss is attributed to the QC tech (QC_ID), not the Fix tech.
+    {
+      const i3qaLabel = (raw['I3QA_LABEL'] || '').trim().toUpperCase();
+      const missLabelsUC = S.detect.triggers.miss.labels.map(l => l.toUpperCase());
+      if (missLabelsUC.includes(i3qaLabel) && r.qc_id) {
+        ensure(r.qc_id);
+        map[r.qc_id].missed++;
+        map[r.qc_id]._src.missed.push(r);
+      }
+    }
+
+    // ── RV tasks ──────────────────────────────────────────────
+    // RV1 points go to RV1 tech, RV2+ go to their respective techs
+    const rv1=raw['RV1_ID'];
+    if(rv1){
+      ensure(rv1); map[rv1].rv++;
+      map[rv1]._src.rv.push(r);
+      map[rv1].points += isIR ? S.calcSettings.points.rv1_combo : S.calcSettings.points.rv1;
+    }
+    for(let i=2;i<=4;i++){
+      const rvi=raw[`RV${i}_ID`];
+      if(rvi){ ensure(rvi); map[rvi].rv++; map[rvi]._src.rv.push(r); map[rvi].points += S.calcSettings.points.rv2; }
+    }
+
+    // ── Refix ─────────────────────────────────────────────────
+    // Use the pre-computed zfix_count from processRecords (reliable on all paths)
+    // Attribute refixes to FIX techs (round-by-round ZFIX) + RV label-based
+    // Label-based refixes → attributed to the RV tech for that round
+    D.refixCols.forEach(col=>{
+      const techIdCol = col.replace(/_LABEL$/i,'_ID');
+      const techId = (raw[techIdCol]||'').trim();
+      if(techId && hasLabel(raw,[col],D.refixLabels)){
+        ensure(techId); map[techId].refix++; map[techId]._src.refix.push(r);
+      }
+    });
+    // ZFIX markers → attributed to the ZFIX tech
+    for(let i=1;i<=5;i++){
+      const z=raw[`ZFIX${i}_ID`];
+      if(z){ ensure(z); map[z].refix++; map[z]._src.refix.push(r); }
+    }
+    // Fallback: if _raw is empty (project reload strips _raw) but zfix_count>0,
+    // attribute all refixes to the QC tech so the total still matches the tasks table
+    if(!Object.keys(raw).length && r.zfix_count > 0 && r.qc_id){
+      ensure(r.qc_id); map[r.qc_id].refix += r.zfix_count;
+    }
+
+    // ── Warnings (configurable cols) ─────────────────────────
+    D.warnCols.forEach((col,idx)=>{
+      const rvCol = `RV${idx+1}_ID`;
+      const techId = (raw[rvCol]||'').trim();
+      if(techId && hasLabel(raw,[col],D.warnLabels)){
+        ensure(techId); map[techId].warn++; map[techId]._src.warn.push(r);
+      }
+    });
+    // Fallback: _raw empty (project reload) but warn_count>0 → attribute to QC tech
+    if(!Object.keys(raw).length && r.warn_count > 0 && r.qc_id){
+      ensure(r.qc_id); map[r.qc_id].warn += r.warn_count;
+    }
+  });
+
+  return Object.values(map).map(t=>{
+    t.points = Math.round(t.points*10000)/10000;
+    const denom=t.fix+t.refix+t.warn;
+    t.qp=denom>0?(t.fix/denom*100):100;
+    t.qualityPctMod=getQualityPct(t.qp);
+    const threshBonus = getThresholdBonus(t.qp);
+    // bonusMultiplier (PHP) is always the same input value regardless of threshold
+    t.bonusMultiplier = currentBonusMultiplier;
+    if (threshBonus !== null) {
+      t.thresholdApplied = true;
+      t.totalBonus = t.points * currentBonusMultiplier * (threshBonus / 100);
+    } else {
+      t.thresholdApplied = false;
+      t.totalBonus = t.points * currentBonusMultiplier * (t.qualityPctMod/100);
+    }
+    return t;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════════════════
+function updateStats(rows){
+  document.getElementById('s-total').textContent=rows.length.toLocaleString();
+  document.getElementById('s-points').textContent=rows.reduce((s,r)=>s+r.total_points,0).toFixed(3);
+  document.getElementById('s-qc').textContent=new Set(rows.map(r=>r.qc_id).filter(Boolean)).size;
+  const fs=new Set();rows.forEach(r=>{for(let i=1;i<=5;i++){const id=r._raw[`FIX${i}_ID`];if(id)fs.add(id);}});
+  document.getElementById('s-fix').textContent=fs.size;
+  document.getElementById('s-ir').textContent=rows.filter(r=>r.ir==='IR'||r.ir==='COMBO').length;
+  document.getElementById('s-ref').textContent=rows.reduce((s,r)=>s+r.zfix_count,0);
+  document.getElementById('s-gsd').textContent=importSettings.gsd;
+  document.getElementById('s-site').textContent=importSettings.site;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER TASKS TABLE
+// ═══════════════════════════════════════════════════════════════
+function renderTable(){
+  const start=(currentPage-1)*PAGE_SIZE;
+  const page=filtered.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById('table-body');
+  if(!page.length){tbody.innerHTML=`<tr><td colspan="15" class="empty-state"><div class="es-icon">🔍</div><p>No records match.</p></td></tr>`;renderFoot([]);updatePagination();return;}
+  tbody.innerHTML=page.map(r=>{
+    const irTag=r.ir==='IR'?'<span style="color:#b45309;font-weight:700;font-size:0.7rem;background:#fef3c7;padding:1px 5px;border-radius:3px;">IR</span>':r.ir==='COMBO'?'<span style="color:#6d28d9;font-weight:700;font-size:0.7rem;background:#ede9fe;padding:1px 5px;border-radius:3px;">COMBO</span>':'—';
+    const uidShort=r.uid.length>32?r.uid.slice(0,30)+'…':r.uid;
+    return `<tr>
+      <td><button class="eye-btn" title="Details">👁</button></td>
+      <td><span class="cell-mono" title="${r.uid}">${uidShort}</span></td>
+      <td style="text-align:center;font-weight:700">${r.category||'—'}</td>
+      <td style="text-align:center">${irTag}</td>
+      <td><span class="cell-link">${r.qc_id||'—'}</span></td>
+      <td><span class="cell-link">${r.i3qa_id||'—'}</span></td>
+      <td style="text-align:center">${r.i3qa_label||'—'}</td>
+      <td><span class="cell-link">${r.fix1_id||'—'}</span></td>
+      <td>${r.fix1_date||'—'}</td>
+      <td style="text-align:center;color:${r.fixed1?'var(--green)':'var(--text-muted)'}">${r.fixed1?'✓':'—'}</td>
+      <td><span class="cell-link">${r.rv1_id||'—'}</span></td>
+      <td style="text-align:center">${r.rv1_label||'—'}</td>
+      <td><span class="cell-link">${r.qa1_id||'—'}</span></td>
+      <td class="cell-num" style="color:${r.zfix_count>0?'var(--red)':'inherit'}">${r.zfix_count||0}</td>
+      <td class="cell-points">${r.total_points.toFixed(4)}</td>
+    </tr>`;
+  }).join('');
+  renderFoot(filtered);updatePagination();
+}
+
+function renderFoot(rows){
+  const foot=document.getElementById('table-foot');
+  if(!rows.length){foot.innerHTML='';return;}
+  foot.innerHTML=`<tr><td colspan="13"><strong>TOT</strong></td>
+    <td class="cell-num"><strong>${rows.reduce((s,r)=>s+r.zfix_count,0)}</strong></td>
+    <td class="cell-points"><strong>${rows.reduce((s,r)=>s+r.total_points,0).toFixed(4)}</strong></td></tr>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER TECH TABLE
+// ═══════════════════════════════════════════════════════════════
+const TEAM_COLORS={'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
+
+function renderTechTable(){
+  const tbody=document.getElementById('tech-body');
+  if(!filteredTech.length){tbody.innerHTML=`<tr><td colspan="18" class="empty-state"><p>No tech data.</p></td></tr>`;renderTechFoot([]);return;}
+  tbody.innerHTML=filteredTech.map(t=>{
+    const qpColor=t.qp>=95?'var(--green)':t.qp>=85?'var(--amber)':'var(--red)';
+    const bonusColor=t.totalBonus>0?'var(--green)':'var(--text-muted)';
+    const ns='class="cell-num cell-num-blue"';
+    const bg=TEAM_COLORS[t.teamNum]||'transparent';
+    const dd=(stat,val)=>val>0?`<span class="cell-link" style="cursor:pointer;font-weight:700;" onclick="openDrillDown('${t.id}','${stat}')">${val}</span>`:`<span style="color:var(--text-light)">0</span>`;
+    return `<tr>
+      <td><button class="eye-btn">👁</button></td>
+      <td><span class="cell-link" style="font-size:0.72rem">${t.month}</span></td>
+      <td><span class="cell-link cell-mono">${t.id}</span></td>
+      <td>${t.name}</td>
+      <td style="background:${bg};font-weight:600">${t.team}</td>
+      <td style="text-align:center;background:${bg};font-size:0.68rem;color:var(--text-muted)">${t.teamNum}</td>
+      <td class="cell-num cell-num-blue">${dd('initial',t.initial)}</td>
+      <td class="cell-num cell-num-blue">${dd('i3qa',t.i3qa)}</td>
+      <td class="cell-num cell-num-blue">${dd('rv',t.rv)}</td>
+      <td class="cell-num cell-num-blue">${dd('fix',t.fix)}</td>
+      <td class="cell-num cell-num-blue">${dd('missed',t.missed)}</td>
+      <td class="cell-num cell-num-blue">${dd('refix',t.refix)}</td>
+      <td class="cell-num cell-num-blue">${dd('warn',t.warn)}</td>
+      <td class="cell-points">${t.points.toFixed(4)}</td>
+      <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
+      <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
+      <td class="cell-num" style="color:var(--accent)">${t.bonusMultiplier.toFixed(2)}</td>
+      <td class="cell-points" style="color:${bonusColor}">₱${t.totalBonus.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+  renderTechFoot(filteredTech);
+}
+
+function renderTechFoot(rows){
+  const foot=document.getElementById('tech-foot');
+  if(!rows.length){foot.innerHTML='';return;}
+  const sum=k=>rows.reduce((s,r)=>s+r[k],0);
+  foot.innerHTML=`<tr>
+    <td colspan="6"><strong>TOT</strong></td>
+    <td class="cell-num"><strong>${sum('initial')}</strong></td>
+    <td class="cell-num"><strong>${sum('i3qa')}</strong></td>
+    <td class="cell-num"><strong>${sum('rv')}</strong></td>
+    <td class="cell-num"><strong>${sum('fix')}</strong></td>
+    <td class="cell-num"><strong>${sum('missed')}</strong></td>
+    <td class="cell-num"><strong>${sum('refix')}</strong></td>
+    <td class="cell-num"><strong>${sum('warn')}</strong></td>
+    <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
+    <td colspan="3"></td>
+    <td class="cell-points" style="color:var(--green)"><strong>₱${sum('totalBonus').toFixed(2)}</strong></td>
+  </tr>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BONUS CALC
+// ═══════════════════════════════════════════════════════════════
+function recalcBonus(){
+  const bonusMult=Number(document.getElementById('bp-manual-mult').value)||0;
+  currentBonusMultiplier=bonusMult;
+  const applyToTech = t => {
+    const threshBonus = getThresholdBonus(t.qp);
+    const qualityFrac = t.qualityPctMod / 100; // qualityPctMod is stored as 0-120 scale (bonus tier %)
+    // bonusMultiplier (PHP) is always the same input value regardless of threshold
+    t.bonusMultiplier = bonusMult;
+    if (threshBonus !== null) {
+      // Threshold overrides the quality fraction used for payout, but the PHP multiplier stays fixed
+      t.thresholdApplied = true;
+      t.totalBonus = t.points * bonusMult * (threshBonus / 100);
+    } else {
+      t.thresholdApplied = false;
+      t.totalBonus = t.points * bonusMult * qualityFrac;
+    }
+  };
+  techRows.forEach(applyToTech);
+  filteredTech.forEach(applyToTech);
+  renderTechTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SORT / FILTER
+// ═══════════════════════════════════════════════════════════════
+function applyFilters(){
+  const q=document.getElementById('search-input').value.toLowerCase();
+  const cat=document.getElementById('cat-filter').value;
+  const ir=document.getElementById('ir-filter').value;
+  filtered=allRows.filter(r=>{
+    if(cat&&r.category!==cat)return false;
+    if(ir&&r.ir!==ir)return false;
+    if(q&&!(r.uid.toLowerCase().includes(q)||r.qc_id.toLowerCase().includes(q)||r.fix1_id.toLowerCase().includes(q)||r.i3qa_id.toLowerCase().includes(q)))return false;
+    for(const[idx,val]of Object.entries(colFilters)){
+      if(!val)continue;
+      const cols=['uid','category','ir','qc_id','i3qa_id','i3qa_label','fix1_id','fix1_date','fixed1','rv1_id','rv1_label','qa1_id'];
+      const colKey=cols[idx-1]||'';
+      if(colKey&&!(r[colKey]||'').toString().toLowerCase().includes(val))return false;
+    }
+    return true;
+  });
+  filtered.sort((a,b)=>{let av=a[sortKey],bv=b[sortKey];if(typeof av==='string')av=av.toLowerCase();if(typeof bv==='string')bv=bv.toLowerCase();return av<bv?sortDir:av>bv?-sortDir:0;});
+  currentPage=1;renderTable();
+  applyTechFilter();
+}
+function colFilter(input,colIdx){colFilters[colIdx]=input.value.toLowerCase();applyFilters();}
+function sortBy(key){if(sortKey===key)sortDir*=-1;else{sortKey=key;sortDir=-1;}document.querySelectorAll('#main-table thead tr:first-child th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));const ths=document.querySelectorAll('#main-table thead tr:first-child th');const km=['','uid','category','ir','qc_id','i3qa_id','i3qa_label','fix1_id','fix1_date','fixed1','rv1_id','rv1_label','qa1_id','zfix_count','total_points'];const idx=km.indexOf(key);if(idx>=0&&ths[idx])ths[idx].classList.add(sortDir===-1?'sort-desc':'sort-asc');applyFilters();}
+function sortTech(key){if(techSortKey===key)techSortDir*=-1;else{techSortKey=key;techSortDir=-1;}applyTechFilter();}
+
+// ═══════════════════════════════════════════════════════════════
+// PAGINATION
+// ═══════════════════════════════════════════════════════════════
+function updatePagination(){
+  const total=Math.ceil(filtered.length/PAGE_SIZE);const cp=currentPage;
+  document.getElementById('page-info').textContent=`Showing ${Math.min((cp-1)*PAGE_SIZE+1,filtered.length)}–${Math.min(cp*PAGE_SIZE,filtered.length)} of ${filtered.length.toLocaleString()}`;
+  document.getElementById('prev-btn').disabled=cp<=1;document.getElementById('next-btn').disabled=cp>=total;
+  const mid=document.getElementById('page-mid');const pages=[];
+  if(total<=7){for(let i=1;i<=total;i++)pages.push(i);}
+  else{pages.push(1);if(cp>3)pages.push('…');for(let i=Math.max(2,cp-1);i<=Math.min(total-1,cp+1);i++)pages.push(i);if(cp<total-2)pages.push('…');pages.push(total);}
+  mid.innerHTML=pages.map(p=>p==='…'?`<span style="padding:4px;color:var(--text-muted)">…</span>`:`<button class="page-btn${p===cp?' active':''}" onclick="gotoPage(${p})">${p}</button>`).join('');
+}
+function changePage(dir){const total=Math.ceil(filtered.length/PAGE_SIZE);currentPage=Math.max(1,Math.min(total,currentPage+dir));renderTable();document.querySelector('.table-wrap').scrollTop=0;}
+function gotoPage(p){currentPage=p;renderTable();document.querySelector('.table-wrap').scrollTop=0;}
+function changePageSize(){PAGE_SIZE=+document.getElementById('rows-per-page').value;currentPage=1;renderTable();}
+
+// ═══════════════════════════════════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════════════════════════════════
+function switchView(v){
+  currentView=v;
+  document.getElementById('nav-tasks').classList.toggle('active',v==='tasks');
+  document.getElementById('nav-tech').classList.toggle('active',v==='tech');
+  document.getElementById('nav-calcall').classList.toggle('active',v==='calcall');
+  document.getElementById('view-tasks').style.display=v==='tasks'?'block':'none';
+  document.getElementById('view-tech').style.display=v==='tech'?'block':'none';
+  document.getElementById('view-calcall').style.display=v==='calcall'?'flex':'none';
+  document.querySelector('.pagination-bar').style.display=v==='tasks'?'flex':'none';
+  document.getElementById('bonus-panel-wrap').style.display=v==='tech'?'block':'none';
+  document.getElementById('team-filter-bar').style.display=v==='tech'?'flex':'none';
+  if(v==='tech'){buildTeamChips();recalcBonus();}
+  if(v==='calcall'){initCalcAllView();}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// IMPORT MODAL
+// ═══════════════════════════════════════════════════════════════
+function selectChip(el){
+  const group=el.dataset.group;
+  document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(c=>{
+    c.classList.remove('selected','green','amber','red','gray');
+  });
+  el.classList.add('selected');
+  if(group==='gsd'){
+    if(el.dataset.val==='3in')el.classList.add('amber');
+    else if(el.dataset.val==='9in')el.classList.add('red');
+    else el.classList.add('green');
+  } else if(group==='site') {
+    // default blue accent
+  } else if(group==='blocktype'){
+    if(el.dataset.val==='IR')el.classList.add('amber');
+    else if(el.dataset.val==='NON')el.classList.add('red');
+    else el.classList.add('gray');
+  }
+}
+
+function impBlocktypeChange() {
+  const isIR = document.getElementById('imp-bt-ir').checked;
+  const notice = document.getElementById('imp-ir-notice');
+  notice.style.display = isIR ? 'block' : 'none';
+  notice.style.borderColor = 'var(--amber)'; notice.style.background = '#fef3c7'; notice.style.color = '#92400e';
+  notice.innerHTML = '⚡ <strong>IR Project:</strong> All fix task points will be multiplied by ×1.5. SQM bonus multiplier does not apply.';
+}
+
+function openImportModal(file){
+  pendingFile=file;
+  const fn=file.name.replace(/\.(zip|dbf)$/i,'');
+  document.getElementById('imp-name').value=fn;
+  document.getElementById('imp-bt-non').checked=true;
+  document.getElementById('imp-ir-notice').style.display='none';
+  document.getElementById('import-modal').classList.add('show');
+}
+
+function cancelImport(){
+  pendingFile=null;
+  document.getElementById('import-modal').classList.remove('show');
+}
+
+async function confirmImport(){
+  const site = document.querySelector('.chip[data-group="site"].selected')?.dataset.val || 'Cebu';
+  const gsd  = document.querySelector('.chip[data-group="gsd"].selected')?.dataset.val || '6in';
+  const blocktype = document.getElementById('imp-bt-ir').checked ? 'IR' : 'NON';
+  const month = document.getElementById('imp-month').value;
+  const year  = Number(document.getElementById('imp-year').value);
+  const name  = document.getElementById('imp-name').value.trim() ||
+                pendingFile.name.replace(/\.(zip|dbf)$/i,'');
+
+  importSettings = {site, gsd, blocktype, month, year, sqm: 0, name};
+  document.getElementById('import-modal').classList.remove('show');
+
+  if(pendingFile){
+    await doLoad(pendingFile);
+    pendingFile=null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD DATA
+// ═══════════════════════════════════════════════════════════════
+async function doLoad(file){
+  currentProjectName=importSettings.name||file.name.replace(/\.(zip|dbf)$/i,'');
+  if(file.name.toLowerCase().endsWith('.zip')){
+    showLoading('Extracting ZIP…');
+    const zip=await JSZip.loadAsync(file);
+    const entry=Object.values(zip.files).find(f=>f.name.toLowerCase().endsWith('.dbf'));
+    if(!entry){hideLoading();toast('❌ No .dbf found in ZIP');return;}
+    const buf=await entry.async('arraybuffer');
+    await loadBuffer(buf,currentProjectName);
+  } else if(file.name.toLowerCase().endsWith('.dbf')){
+    const buf=await file.arrayBuffer();
+    await loadBuffer(buf,currentProjectName);
+  } else {
+    toast('❌ Please use .zip or .dbf');
+  }
+}
+
+async function handleFile(file){
+  openImportModal(file);
+}
+
+function parseDBF(buffer){
+  const view=new DataView(buffer);
+  const numRecords=view.getUint32(4,true);
+  const headerBytes=view.getUint16(8,true);
+  const recordBytes=view.getUint16(10,true);
+  const fields=[];let offset=32;
+  while(view.getUint8(offset)!==0x0D&&offset<headerBytes){
+    const nameBytes=new Uint8Array(buffer,offset,11);let name='';
+    for(let i=0;i<11;i++){if(nameBytes[i]===0)break;name+=String.fromCharCode(nameBytes[i]);}
+    const length=view.getUint8(offset+16);
+    fields.push({name,length});offset+=32;
+  }
+  // Normalise all field names to uppercase so lookups always work (e.g. i3QA_ID → I3QA_ID)
+  fields.forEach(f=>{ f.name = f.name.toUpperCase(); });
+  const dec=new TextDecoder('latin1');const records=[];let recOff=headerBytes;
+  for(let r=0;r<numRecords;r++){
+    const del=view.getUint8(recOff++);
+    if(del===0x2A){recOff+=recordBytes-1;continue;}
+    const rec={};
+    for(const f of fields){rec[f.name]=dec.decode(new Uint8Array(buffer,recOff,f.length)).trim();recOff+=f.length;}
+    records.push(rec);
+  }
+  return records;
+}
+
+async function loadBuffer(buffer,name){
+  showLoading('Parsing fixpoint records…');
+  await new Promise(r=>setTimeout(r,30));
+  const raw=parseDBF(buffer);
+  allRows=processRecords(raw);
+  filtered=[...allRows];
+  currentBonusMultiplier=getSqmMultiplier(importSettings.sqm);
+  techRows=buildTechStats(allRows.map(r=>r._raw||r));
+  filteredTech=[...techRows];
+  activeTeamFilter='';
+  if(name)currentProjectName=name;
+  updateStats(allRows);
+  sortBy('total_points');
+  renderTechTable();
+  document.getElementById('dropzone-wrap').style.display='none';
+  document.getElementById('content-area').style.display='flex';
+  document.getElementById('btn-save-project').style.display='';
+  currentRawFile=buffer;
+  updateProjectBadge();
+  hideLoading();
+  toast(`✓ Loaded ${allRows.length.toLocaleString()} records · ${importSettings.gsd} · ${importSettings.site}`);
+}
+
+function updateProjectBadge(){
+  const badge=document.getElementById('project-badge');
+  badge.style.display='flex';
+  document.getElementById('pb-site').textContent=importSettings.site;
+  document.getElementById('pb-gsd').textContent=importSettings.gsd;
+  const typeEl=document.getElementById('pb-type');
+  if(importSettings.blocktype==='IR'){typeEl.textContent='All IR';typeEl.className='pb-type ir';}
+  else{typeEl.textContent='Non-IR';typeEl.className='pb-type non';}
+  document.getElementById('pb-name').textContent=currentProjectName;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS MODAL
+// ═══════════════════════════════════════════════════════════════
+function openSettings(){
+  renderSettingsTables();
+  renderRosterTable();
+  document.getElementById('settings-modal').classList.add('show');
+}
+function closeSettings(){document.getElementById('settings-modal').classList.remove('show');}
+
+function switchTab(name){
+  document.querySelectorAll('.stab').forEach((t,i)=>{
+    const tabs=['cat','quality','ir','detect','bonus','roster','teams'];
+    t.classList.toggle('active',tabs[i]===name);
+  });
+  document.querySelectorAll('.stab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  if(name==='roster') renderRosterTable();
+  if(name==='teams') renderTeamsTable();
+}
+
+function renderSettingsTables(){
+  // Category values
+  // Build catValues array from S.calcSettings.categoryValues for the settings table
+  const catValuesArr = Object.entries(S.calcSettings.categoryValues).map(([cat,vals])=>({
+    cat:Number(cat), v3:vals['3in'], v4:vals['4in'], v6:vals['6in'], v9:vals['9in']
+  }));
+  document.getElementById('cat-table-body').innerHTML=catValuesArr.map((row,i)=>`
+    <tr>
+      <td><strong>${row.cat}</strong></td>
+      <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="v3" value="${row.v3}" /></td>
+      <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="v4" value="${row.v4}" /></td>
+      <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="v6" value="${row.v6}" /></td>
+      <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="v9" value="${row.v9}" /></td>
+      <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="irMod" value="${row.irMod}" /></td>
+    </tr>`).join('');
+
+  // Quality Modifiers — now driven by bonusTiers (from script.js)
+  document.getElementById('quality-table-body').innerHTML=S.bonusTiers.map((row,i)=>`
+    <tr>
+      <td>${row.quality}%</td>
+      <td>${(row.bonus*100).toFixed(0)}%</td>
+      <td><input class="mod-input" data-table="bonus-tier" data-idx="${i}" data-field="bonus" value="${(row.bonus*100).toFixed(0)}" style="width:70px;" /></td>
+    </tr>`).join('');
+
+  // IR / Points tab
+  document.getElementById('ir-mod-input').value   = S.calcSettings.irModifierValue;
+  document.getElementById('bonus-floor-input').value = S.bonusFloor;
+  document.getElementById('rv1-non-ir-input').value  = S.calcSettings.points.rv1;
+  document.getElementById('rv1-ir-input').value       = S.calcSettings.points.rv1_combo;
+  document.getElementById('rv2-input').value          = S.calcSettings.points.rv2;
+  document.getElementById('qc-pts-input').value       = S.calcSettings.points.qc;
+  document.getElementById('i3qa-pts-input').value     = S.calcSettings.points.i3qa;
+
+  // Bonus thresholds tab
+  const bt = S.bonusThresholds || [];
+  const top = bt.find(t=>t.quality===100) || {quality:100, bonus:120};
+  const mid = bt.find(t=>t.quality<100 && t.quality>=99) || bt[1] || {quality:99.5, bonus:118};
+  document.getElementById('bonus-top-quality').value = top.quality;
+  document.getElementById('bonus-top-mult').value = top.bonus;
+  document.getElementById('bonus-mid-quality').value = mid.quality;
+  document.getElementById('bonus-mid-mult').value = mid.bonus;
+
+  // Detection rules tab
+  const D = S.detect;
+  document.getElementById('det-qc-col').value   = (D.taskColumns.qc||[]).join(', ')   || 'qc_id';
+  document.getElementById('det-i3qa-col').value  = (D.taskColumns.i3qa||[]).join(', ') || 'i3qa_id';
+  document.getElementById('det-rv1-col').value   = (D.taskColumns.rv1||[]).join(', ')  || 'rv1_id';
+  document.getElementById('det-rv2-col').value   = (D.taskColumns.rv2||[]).join(', ')  || 'rv2_id';
+  document.getElementById('det-refix-labels').value  = (D.triggers.refix.labels     ||[]).join(', ');
+  document.getElementById('det-refix-cols').value    = (D.triggers.refix.columns    ||[]).join(', ');
+  document.getElementById('det-miss-labels').value   = (D.triggers.miss.labels      ||[]).join(', ');
+  document.getElementById('det-miss-cols').value     = (D.triggers.miss.columns     ||[]).join(', ');
+  document.getElementById('det-warn-labels').value   = (D.triggers.warning.labels   ||[]).join(', ');
+  document.getElementById('det-warn-cols').value     = (D.triggers.warning.columns  ||[]).join(', ');
+  document.getElementById('det-qcpen-labels').value  = (D.triggers.qcPenalty.labels ||[]).join(', ');
+  document.getElementById('det-qcpen-cols').value    = (D.triggers.qcPenalty.columns||[]).join(', ');
+}
+
+function saveSettings(){
+  // Read all editable inputs
+  document.querySelectorAll('.mod-input[data-table]').forEach(inp=>{
+    const tbl=inp.dataset.table;const idx=Number(inp.dataset.idx);const field=inp.dataset.field;
+    const val=Number(inp.value);
+    if(tbl==='cat'){
+      // map old field names v3/v4/v6/v9 → gsd keys
+      const gsdMap={v3:'3in',v4:'4in',v6:'6in',v9:'9in'};
+      const cat=idx+1; const gKey=gsdMap[field]||field;
+      if(S.calcSettings.categoryValues[cat]) S.calcSettings.categoryValues[cat][gKey]=val;
+    }
+  });
+  S.calcSettings.irModifierValue = Number(document.getElementById('ir-mod-input').value)||1.5;
+  S.bonusFloor = Number(document.getElementById('bonus-floor-input').value)||9.5;
+  S.calcSettings.points.rv1       = Number(document.getElementById('rv1-non-ir-input').value)||0.2;
+  S.calcSettings.points.rv1_combo = Number(document.getElementById('rv1-ir-input').value)||0.25;
+  S.calcSettings.points.rv2       = Number(document.getElementById('rv2-input').value)||0.5;
+  S.calcSettings.points.qc        = Number(document.getElementById('qc-pts-input').value)||0.125;
+  S.calcSettings.points.i3qa      = Number(document.getElementById('i3qa-pts-input').value)||1/12;
+
+  // Save bonus thresholds
+  S.bonusThresholds = [
+    { quality: Number(document.getElementById('bonus-top-quality').value)||100, bonus: Number(document.getElementById('bonus-top-mult').value)||120 },
+    { quality: Number(document.getElementById('bonus-mid-quality').value)||99.5, bonus: Number(document.getElementById('bonus-mid-mult').value)||118 },
+  ].sort((a,b)=>b.quality-a.quality);
+
+  // Save detection rules into the triggers/taskColumns structure
+  S.detect.taskColumns.qc   = splitLabels(document.getElementById('det-qc-col').value)  .map(s=>s.toLowerCase());
+  S.detect.taskColumns.i3qa = splitLabels(document.getElementById('det-i3qa-col').value) .map(s=>s.toLowerCase());
+  S.detect.taskColumns.rv1  = splitLabels(document.getElementById('det-rv1-col').value)  .map(s=>s.toLowerCase());
+  S.detect.taskColumns.rv2  = splitLabels(document.getElementById('det-rv2-col').value)  .map(s=>s.toLowerCase());
+  S.detect.triggers.refix.labels     = splitLabels(document.getElementById('det-refix-labels').value);
+  S.detect.triggers.refix.columns    = splitLabels(document.getElementById('det-refix-cols').value);
+  S.detect.triggers.miss.labels      = splitLabels(document.getElementById('det-miss-labels').value);
+  S.detect.triggers.miss.columns     = splitLabels(document.getElementById('det-miss-cols').value);
+  S.detect.triggers.warning.labels   = splitLabels(document.getElementById('det-warn-labels').value);
+  S.detect.triggers.warning.columns  = splitLabels(document.getElementById('det-warn-cols').value);
+  S.detect.triggers.qcPenalty.labels = splitLabels(document.getElementById('det-qcpen-labels').value);
+  S.detect.triggers.qcPenalty.columns= splitLabels(document.getElementById('det-qcpen-cols').value);
+  closeSettings();
+  // Recalculate everything
+  if(allRows.length>0 && currentRawFile){
+    showLoading('Recalculating with new settings…');
+    setTimeout(()=>{
+      const raw=parseDBF(currentRawFile);
+      allRows=processRecords(raw);
+      filtered=[...allRows];
+      techRows=buildTechStats(allRows.map(r=>r._raw||r));
+      filteredTech=[...techRows];
+      updateStats(allRows);
+      applyFilters();
+      if(currentView==='tech')recalcBonus();
+      hideLoading();
+      toast('✓ Settings saved & points recalculated');
+    },30);
+  } else {
+    toast('✓ Settings saved');
+  }
+}
+
+function resetSettings(){
+  if(!confirm('Reset all modifier tables to PDF defaults?'))return;
+  S=JSON.parse(JSON.stringify(PDF_DEFAULTS));
+  renderSettingsTables();
+  toast('↺ Reset to PDF defaults');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TECH ROSTER MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+let _editingTechId = null; // null = adding new, string = editing existing
+
+function renderRosterTable(filterVal) {
+  const q = (filterVal || document.getElementById('roster-search')?.value || '').toLowerCase();
+  const entries = Object.entries(TECH_ROSTER)
+    .filter(([id, info]) => !q || id.toLowerCase().includes(q) || (info.name||'').toLowerCase().includes(q) || (info.team||'').toLowerCase().includes(q))
+    .sort((a,b) => a[0].localeCompare(b[0]));
+  const tbody = document.getElementById('roster-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = entries.map(([id, info]) => `
+    <tr>
+      <td><span class="cell-mono" style="font-size:0.78rem;font-weight:700">${id}</span></td>
+      <td>${info.name||'—'}</td>
+      <td>${info.team||'—'}</td>
+      <td style="color:var(--text-muted);font-size:0.72rem">${info.teamNum||'—'}</td>
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:0.72rem;" onclick="openEditTechModal('${id.replace(/'/g,"\\'")}')" title="Edit">✏</button>
+        <button class="btn btn-danger" style="padding:3px 8px;font-size:0.72rem;" onclick="deleteTechEntry('${id.replace(/'/g,"\\'")}')" title="Delete">🗑</button>
+      </td>
+    </tr>`).join('');
+  const countEl = document.getElementById('roster-count');
+  if (countEl) countEl.textContent = `${entries.length} of ${Object.keys(TECH_ROSTER).length} technicians`;
+}
+
+function filterRosterTable() {
+  renderRosterTable(document.getElementById('roster-search').value);
+}
+
+function openAddTechModal() {
+  _editingTechId = null;
+  document.getElementById('add-tech-title').textContent = '➕ Add Tech';
+  document.getElementById('tech-id-input').value = '';
+  document.getElementById('tech-name-input').value = '';
+  document.getElementById('tech-team-input').value = '';
+  document.getElementById('tech-teamnum-input').value = '';
+  document.getElementById('tech-id-input').readOnly = false;
+  document.getElementById('tech-modal-err').style.display = 'none';
+  populateTeamDatalist();
+  document.getElementById('tech-team-select').value = '';
+  document.getElementById('add-tech-modal').classList.add('show');
+  setTimeout(() => document.getElementById('tech-id-input').focus(), 100);
+}
+
+function openEditTechModal(id) {
+  const info = TECH_ROSTER[id];
+  if (!info) return;
+  _editingTechId = id;
+  document.getElementById('add-tech-title').textContent = `✏ Edit Tech — ${id}`;
+  document.getElementById('tech-id-input').value = id;
+  document.getElementById('tech-id-input').readOnly = true;
+  document.getElementById('tech-name-input').value = info.name || '';
+  document.getElementById('tech-team-input').value = info.team || '';
+  document.getElementById('tech-teamnum-input').value = info.teamNum || '';
+  document.getElementById('tech-modal-err').style.display = 'none';
+  populateTeamDatalist();
+  // Select the matching option in the dropdown
+  const sel = document.getElementById('tech-team-select');
+  sel.value = info.team || '';
+  document.getElementById('add-tech-modal').classList.add('show');
+  setTimeout(() => document.getElementById('tech-name-input').focus(), 100);
+}
+
+function saveTechEntry() {
+  const id = document.getElementById('tech-id-input').value.trim().toUpperCase();
+  const name = document.getElementById('tech-name-input').value.trim();
+  const team = document.getElementById('tech-team-input').value.trim();
+  const teamNum = document.getElementById('tech-teamnum-input').value.trim();
+  const errEl = document.getElementById('tech-modal-err');
+  if (!id) { errEl.textContent='Tech ID is required.'; errEl.style.display='block'; return; }
+  if (!name) { errEl.textContent='Full Name is required.'; errEl.style.display='block'; return; }
+  if (!_editingTechId && TECH_ROSTER[id]) { errEl.textContent=`Tech ID "${id}" already exists.`; errEl.style.display='block'; return; }
+  TECH_ROSTER[id] = { name, team, teamNum };
+  closeModal('add-tech-modal');
+  renderRosterTable();
+  toast(`✓ ${_editingTechId ? 'Updated' : 'Added'} tech ${id}`);
+}
+
+function deleteTechEntry(id) {
+  if (!confirm(`Delete tech "${id} — ${TECH_ROSTER[id]?.name || ''}"? This cannot be undone.`)) return;
+  delete TECH_ROSTER[id];
+  renderRosterTable();
+  toast(`🗑 Deleted tech ${id}`);
+}
+
+function exportRosterCSV() {
+  const lines = ['Tech ID,Full Name,Team,Team #'];
+  Object.entries(TECH_ROSTER).sort((a,b)=>a[0].localeCompare(b[0]))
+    .forEach(([id,info]) => lines.push(`"${id}","${info.name||''}","${info.team||''}","${info.teamNum||''}"`));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type:'text/csv'}));
+  a.download = 'tech_roster.csv';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TEAM MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+let _editingTeamName = null; // null = adding, string = editing
+
+function getTeams() {
+  // Derive unique teams from TECH_ROSTER
+  const map = {};
+  Object.values(TECH_ROSTER).forEach(info => {
+    if (info.team) {
+      if (!map[info.team]) map[info.team] = { name: info.team, teamNum: info.teamNum || '—', count: 0 };
+      map[info.team].count++;
+    }
+  });
+  return Object.values(map).sort((a,b) => a.name.localeCompare(b.name));
+}
+
+function renderTeamsTable() {
+  const teams = getTeams();
+  const tbody = document.getElementById('teams-table-body');
+  if (!tbody) return;
+  if (!teams.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No teams found. Add techs with team names first.</td></tr>';
+    document.getElementById('teams-count').textContent = '0 teams';
+    return;
+  }
+  tbody.innerHTML = teams.map(t => `
+    <tr>
+      <td style="font-weight:600">${t.name}</td>
+      <td style="color:var(--text-muted);font-size:0.72rem">${t.teamNum}</td>
+      <td style="text-align:right;color:var(--text-muted)">${t.count}</td>
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:0.72rem;" onclick="openEditTeamModal('${t.name.replace(/'/g,"\\'")}')" title="Edit">✏</button>
+        <button class="btn btn-danger" style="padding:3px 8px;font-size:0.72rem;" onclick="deleteTeam('${t.name.replace(/'/g,"\\'")}')">🗑</button>
+      </td>
+    </tr>`).join('');
+  document.getElementById('teams-count').textContent = `${teams.length} team${teams.length!==1?'s':''}`;
+}
+
+function openAddTeamModal() {
+  _editingTeamName = null;
+  document.getElementById('add-team-title').textContent = '➕ Add Team';
+  document.getElementById('team-name-input').value = '';
+  document.getElementById('team-num-input').value = '';
+  document.getElementById('team-modal-err').style.display = 'none';
+  document.getElementById('add-team-modal').classList.add('show');
+  setTimeout(() => document.getElementById('team-name-input').focus(), 100);
+}
+
+function openEditTeamModal(teamName) {
+  const teams = getTeams();
+  const t = teams.find(x => x.name === teamName);
+  if (!t) return;
+  _editingTeamName = teamName;
+  document.getElementById('add-team-title').textContent = `✏ Edit Team`;
+  document.getElementById('team-name-input').value = t.name;
+  document.getElementById('team-num-input').value = t.teamNum !== '—' ? t.teamNum : '';
+  document.getElementById('team-modal-err').style.display = 'none';
+  document.getElementById('add-team-modal').classList.add('show');
+  setTimeout(() => document.getElementById('team-name-input').focus(), 100);
+}
+
+function saveTeamEntry() {
+  const newName = document.getElementById('team-name-input').value.trim();
+  const newNum  = document.getElementById('team-num-input').value.trim();
+  const errEl = document.getElementById('team-modal-err');
+  if (!newName) { errEl.textContent='Team Name is required.'; errEl.style.display='block'; return; }
+  if (!newNum)  { errEl.textContent='Team # is required.'; errEl.style.display='block'; return; }
+
+  if (_editingTeamName) {
+    // Rename: update all techs that had the old team name
+    Object.values(TECH_ROSTER).forEach(info => {
+      if (info.team === _editingTeamName) {
+        info.team = newName;
+        info.teamNum = newNum;
+      }
+    });
+    toast(`✓ Updated team "${_editingTeamName}" → "${newName}"`);
+  } else {
+    // Adding a new team is done by creating a placeholder entry? No — teams exist via techs.
+    // Just notify the user and pre-populate the team name in the roster datalist.
+    toast(`✓ Team "${newName}" ready — add techs to it via the Tech Roster tab`);
+  }
+  closeModal('add-team-modal');
+  renderTeamsTable();
+  renderRosterTable();
+  // Also rebuild team chips on the main view
+  if (techRows.length) buildTeamChips();
+}
+
+function deleteTeam(teamName) {
+  const teams = getTeams();
+  const t = teams.find(x => x.name === teamName);
+  const count = t ? t.count : 0;
+  if (!confirm(`Delete team "${teamName}"? This will remove the team assignment from ${count} tech(s). Techs will remain in the roster as "Unknown Team".`)) return;
+  Object.values(TECH_ROSTER).forEach(info => {
+    if (info.team === teamName) { info.team = ''; info.teamNum = ''; }
+  });
+  renderTeamsTable();
+  renderRosterTable();
+  if (techRows.length) buildTeamChips();
+  toast(`🗑 Deleted team "${teamName}"`);
+}
+
+// Populate team dropdown in Add/Edit Tech modal
+function populateTeamDatalist() {
+  const sel = document.getElementById('tech-team-select');
+  if (!sel) return;
+  const teams = getTeams();
+  const currentTeam = document.getElementById('tech-team-input').value;
+  sel.innerHTML = '<option value="">— Select a team —</option>' +
+    teams.map(t => {
+      const label = t.teamNum && t.teamNum !== '—' ? `${t.name} (${t.teamNum})` : t.name;
+      const isSelected = currentTeam === t.name ? ' selected' : '';
+      return `<option value="${t.name.replace(/"/g,'&quot;')}" data-num="${(t.teamNum||'').replace(/"/g,'&quot;')}"${isSelected}>${label}</option>`;
+    }).join('');
+}
+
+// Sync hidden inputs when the dropdown selection changes
+function onTeamSelectChange() {
+  const sel = document.getElementById('tech-team-select');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('tech-team-input').value = sel.value;
+  document.getElementById('tech-teamnum-input').value = (opt && opt.dataset.num) ? opt.dataset.num : '';
+}
+
+// Legacy no-op kept for any stray references
+function autoFillTeamNum() {}
+
+// ═══════════════════════════════════════════════════════════════
+// PROJECT SAVE / LOAD (IndexedDB)
+// ═══════════════════════════════════════════════════════════════
+const DB_NAME='FixpointsDB',DB_VER=2,STORE='projects';
+let db=null;
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains(STORE)){
+        const s=d.createObjectStore(STORE,{keyPath:'name'});
+        s.createIndex('createdAt','createdAt');
+      }
+    };
+    req.onsuccess=e=>{db=e.target.result;res(db);};
+    req.onerror=e=>rej(e);
+  });
+}
+async function dbSave(p){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(p).onsuccess=()=>res();tx.onerror=e=>rej(e);});}
+async function dbGetAll(){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readonly');tx.objectStore(STORE).getAll().onsuccess=e=>res(e.target.result);tx.onerror=e=>rej(e);});}
+async function dbDelete(name){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(name).onsuccess=()=>res();tx.onerror=e=>rej(e);});}
+async function dbGet(name){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readonly');tx.objectStore(STORE).get(name).onsuccess=e=>res(e.target.result);tx.onerror=e=>rej(e);});}
+
+function openSaveModal(){
+  document.getElementById('project-name-input').value=currentProjectName||'';
+  document.getElementById('save-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('project-name-input').focus(),100);
+}
+function closeModal(id){document.getElementById(id||'save-modal').classList.remove('show');}
+
+async function saveProject(){
+  const name=document.getElementById('project-name-input').value.trim();
+  if(!name){alert('Enter a project name.');return;}
+  showLoading('Saving…');closeModal('save-modal');
+  const project={name,createdAt:Date.now(),rowCount:allRows.length,
+    rows:allRows.map(r=>({...r,_raw:r._raw||{}})),
+    rawBuffer:currentRawFile,importSettings:{...importSettings}};
+  try{await dbSave(project);currentProjectName=name;toast(`✓ Saved "${name}"`);await refreshProjectList();}
+  catch(e){console.error(e);toast('Error saving');}
+  hideLoading();
+}
+
+async function loadProject(name){
+  showLoading('Loading…');
+  const proj=await dbGet(name);
+  if(!proj){hideLoading();toast('Project not found');return;}
+  if(proj.importSettings)importSettings={...proj.importSettings};
+  currentProjectName=proj.name;
+  if(proj.rawBuffer){
+    await loadBuffer(proj.rawBuffer,proj.name);
+  } else {
+    allRows=proj.rows.map(r=>({...r,_raw:r._raw||{}}));
+    filtered=[...allRows];techRows=buildTechStats(allRows.map(r=>r._raw||r));filteredTech=[...techRows];
+    updateStats(allRows);sortBy('total_points');renderTechTable();
+    document.getElementById('dropzone-wrap').style.display='none';
+    document.getElementById('content-area').style.display='flex';
+    document.getElementById('btn-save-project').style.display='';
+    updateProjectBadge();hideLoading();toast(`✓ Loaded "${name}"`);
+  }
+  document.querySelectorAll('.project-item').forEach(el=>el.classList.toggle('active',el.dataset.name===name));
+}
+
+async function deleteProject(name){
+  if(!confirm(`Delete "${name}"?`))return;
+  await dbDelete(name);toast(`Deleted "${name}"`);await refreshProjectList();
+}
+
+async function refreshProjectList(){
+  const projects=await dbGetAll();
+  const list=document.getElementById('project-list');
+  if(!projects.length){list.innerHTML='<div style="padding:8px 16px;font-size:0.72rem;color:rgba(255,255,255,0.25)">No saved projects yet</div>';return;}
+  projects.sort((a,b)=>b.createdAt-a.createdAt);
+  list.innerHTML=projects.map(p=>`
+    <div class="project-item${p.name===currentProjectName?' active':''}" data-name="${p.name}" onclick="loadProject('${p.name.replace(/'/g,"\\'")}')">
+      <span style="font-size:12px">📁</span>
+      <span class="pi-name" title="${p.name}">${p.name}</span>
+      <span class="pi-count">${(p.rowCount||'?').toLocaleString()}</span>
+      <span class="pi-del" onclick="event.stopPropagation();deleteProject('${p.name.replace(/'/g,"\\'")}')">✕</span>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CSV EXPORT
+// ═══════════════════════════════════════════════════════════════
+function downloadCSV(){
+  const cols=['uid','category','ir','qc_id','i3qa_id','i3qa_label','fix1_id','fix1_date','fixed1','rv1_id','rv1_label','qa1_id','qa1_label','zfix_count','total_points'];
+  const lines=[cols.join(',')];
+  filtered.forEach(r=>lines.push(cols.map(c=>`"${r[c]}"`).join(',')));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+  a.download=`${currentProjectName||'fixpoints'}_export.csv`;a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// THEME TOGGLE
+// ═══════════════════════════════════════════════════════════════
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme==='dark'?'dark':'');
+  const btn = document.getElementById('theme-btn');
+  if(btn){ btn.textContent = theme==='dark' ? '☀ Light' : '🌙 Dark'; }
+  try{ localStorage.setItem('fp-theme', theme); } catch(e){}
+}
+function toggleTheme(){
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  applyTheme(isDark ? 'light' : 'dark');
+}
+(function initTheme(){
+  try{ const t=localStorage.getItem('fp-theme'); if(t) applyTheme(t); } catch(e){}
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// TEAM FILTER (Tech Summary view)
+// ═══════════════════════════════════════════════════════════════
+let activeTeamFilter = '';
+
+function buildTeamChips(){
+  const teams = [...new Set(techRows.map(t=>t.team).filter(Boolean))].sort();
+  const wrap = document.getElementById('team-chips');
+  wrap.innerHTML = `<span class="team-chip active" data-team="" onclick="selectTeamChip(this)">All Teams</span>`
+    + teams.map(t=>`<span class="team-chip" data-team="${t.replace(/"/g,'&quot;')}" onclick="selectTeamChip(this)">${t}</span>`).join('');
+  // restore selection
+  wrap.querySelectorAll('.team-chip').forEach(c=>{
+    if(c.dataset.team===activeTeamFilter) c.classList.add('active');
+    else c.classList.remove('active');
+  });
+}
+
+function selectTeamChip(el){
+  document.querySelectorAll('#team-chips .team-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  activeTeamFilter = el.dataset.team;
+  applyTechFilter();
+}
+
+function applyTechFilter(){
+  const q = (document.getElementById('tech-search-input')?.value||'').toLowerCase();
+  filteredTech = techRows.filter(t=>{
+    if(activeTeamFilter && t.team !== activeTeamFilter) return false;
+    if(q && !(t.id.toLowerCase().includes(q)||t.name.toLowerCase().includes(q)||t.team.toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a,b)=>{
+    let av=a[techSortKey],bv=b[techSortKey];
+    if(typeof av==='string')av=av.toLowerCase();
+    if(typeof bv==='string')bv=bv.toLowerCase();
+    return av<bv?techSortDir:av>bv?-techSortDir:0;
+  });
+  renderTechTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALCULATE ALL PROJECTS  (full-page view)
+// ═══════════════════════════════════════════════════════════════
+let calcAllData = [];        // full dataset after calculate
+let calcAllFiltered = [];    // after search+team filter
+let calcAllSortKey = 'points';
+let calcAllSortDir = -1;
+let calcAllTeamFilter = '';
+
+async function initCalcAllView(){
+  const projects = await dbGetAll();
+  document.getElementById('ca-project-count').textContent =
+    `${projects.length} project${projects.length!==1?'s':''} in storage`;
+}
+
+async function runCalcAll(){
+  const mult = Number(document.getElementById('ca-mult').value) || 9.5;
+  const projects = await dbGetAll();
+  if(!projects.length){ toast('No saved projects found'); return; }
+
+  const progWrap = document.getElementById('ca-progress-wrap');
+  const progLabel = document.getElementById('ca-progress-label');
+  const progBar = document.getElementById('ca-bar');
+  progWrap.style.display = 'block';
+
+  const combined = {};
+
+  for(let i=0; i<projects.length; i++){
+    const proj = projects[i];
+    progLabel.textContent = `Processing ${proj.name} (${i+1}/${projects.length})…`;
+    progBar.style.width = `${Math.round((i/projects.length)*100)}%`;
+    await new Promise(r=>setTimeout(r,10));
+
+    let rawRecords = [];
+    try{
+      if(proj.rawBuffer){
+        rawRecords = parseDBF(proj.rawBuffer);
+      } else if(proj.rows && proj.rows.length){
+        rawRecords = proj.rows.map(r=>r._raw||r);
+      }
+    } catch(e){ console.warn('Failed to parse project', proj.name, e); continue; }
+    if(!rawRecords.length) continue;
+
+    const savedSettings = {...importSettings};
+    if(proj.importSettings) Object.assign(importSettings, proj.importSettings);
+    const techStats = buildTechStats(rawRecords);
+    techStats.forEach(t=>{
+      const key = t.id;
+      if(!combined[key]){
+        combined[key] = {
+          id:t.id, name:t.name, team:t.team, teamNum:t.teamNum,
+          initial:0, i3qa:0, rv:0, fix:0, missed:0, refix:0, warn:0,
+          points:0, projects:[]
+        };
+      }
+      const c = combined[key];
+      c.initial += t.initial||0; c.i3qa += t.i3qa||0; c.rv += t.rv||0;
+      c.fix += t.fix||0; c.missed += t.missed||0; c.refix += t.refix||0;
+      c.warn += t.warn||0; c.points += t.points||0;
+      if(!c.projects.includes(proj.name)) c.projects.push(proj.name);
+    });
+    Object.assign(importSettings, savedSettings);
+  }
+
+  progBar.style.width = '100%';
+  progLabel.textContent = `Done — ${Object.keys(combined).length} techs across ${projects.length} projects`;
+  await new Promise(r=>setTimeout(r,200));
+  progWrap.style.display = 'none';
+
+  calcAllData = Object.values(combined).map(c=>{
+    c.points = Math.round(c.points*10000)/10000;
+    const denom = c.fix + c.refix + c.warn;
+    c.qp = denom>0 ? (c.fix/denom*100) : 0;
+    const qualMod = calculateQualityModifier(c.qp);
+    const threshBonus = getThresholdBonus(c.qp);
+    c.qualityPctMod = Math.round(qualMod*100*100)/100;
+    c.thresholdApplied = threshBonus !== null;
+    c.bonusMult = mult;
+    c.totalBonus = threshBonus !== null
+      ? c.points * mult * (threshBonus/100)
+      : c.points * mult * qualMod;
+    return c;
+  });
+
+  // Update stats bar
+  const allProjects = [...new Set(calcAllData.flatMap(t=>t.projects))];
+  document.getElementById('cas-techs').textContent = calcAllData.length;
+  document.getElementById('cas-points').textContent = calcAllData.reduce((s,t)=>s+t.points,0).toFixed(2);
+  document.getElementById('cas-initial').textContent = calcAllData.reduce((s,t)=>s+t.initial,0);
+  document.getElementById('cas-i3qa').textContent = calcAllData.reduce((s,t)=>s+t.i3qa,0);
+  document.getElementById('cas-rv').textContent = calcAllData.reduce((s,t)=>s+t.rv,0);
+  document.getElementById('cas-fix').textContent = calcAllData.reduce((s,t)=>s+t.fix,0);
+  document.getElementById('cas-missed').textContent = calcAllData.reduce((s,t)=>s+t.missed,0);
+  document.getElementById('cas-refix').textContent = calcAllData.reduce((s,t)=>s+t.refix,0);
+  document.getElementById('cas-bonus').textContent = '₱' + calcAllData.reduce((s,t)=>s+t.totalBonus,0).toFixed(2);
+  document.getElementById('cas-projects').textContent = allProjects.length;
+  document.getElementById('ca-stats-bar').style.display = '';
+
+  buildCalcAllTeamChips();
+  applyCalcAllFilter();
+}
+
+function applyCalcAllFilter(){
+  const q = (document.getElementById('ca-search-input')?.value||'').toLowerCase();
+  calcAllFiltered = calcAllData.filter(t=>{
+    if(calcAllTeamFilter && t.team !== calcAllTeamFilter) return false;
+    if(q && !(t.id.toLowerCase().includes(q)||t.name.toLowerCase().includes(q)||t.team.toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a,b)=>{
+    let av=a[calcAllSortKey], bv=b[calcAllSortKey];
+    if(typeof av==='string') av=av.toLowerCase();
+    if(typeof bv==='string') bv=bv.toLowerCase();
+    return av<bv?calcAllSortDir:av>bv?-calcAllSortDir:0;
+  });
+  renderCalcAllTable(calcAllFiltered);
+}
+
+function sortCalcAll(key){
+  if(calcAllSortKey===key) calcAllSortDir*=-1; else { calcAllSortKey=key; calcAllSortDir=-1; }
+  document.querySelectorAll('#ca-header-row th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));
+  const keys=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','bonusMult','totalBonus','projects'];
+  const idx=keys.indexOf(key);
+  const ths=document.querySelectorAll('#ca-header-row th');
+  if(idx>=0&&ths[idx]) ths[idx].classList.add(calcAllSortDir===-1?'sort-desc':'sort-asc');
+  applyCalcAllFilter();
+}
+
+function buildCalcAllTeamChips(){
+  const teams = [...new Set(calcAllData.map(t=>t.team).filter(Boolean))].sort();
+  const wrap = document.getElementById('ca-team-chips');
+  wrap.innerHTML = `<span class="team-chip active" data-team="" onclick="selectCalcAllTeamChip(this)">All Teams</span>`
+    + teams.map(t=>`<span class="team-chip" data-team="${t.replace(/"/g,'&quot;')}" onclick="selectCalcAllTeamChip(this)">${t}</span>`).join('');
+}
+
+function selectCalcAllTeamChip(el){
+  document.querySelectorAll('#ca-team-chips .team-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  calcAllTeamFilter = el.dataset.team;
+  applyCalcAllFilter();
+}
+
+function renderCalcAllTable(data){
+  const tbl = document.getElementById('ca-main-table');
+  const empty = document.getElementById('ca-empty-state');
+  if(!data.length && !calcAllData.length){
+    tbl.style.display='none'; empty.style.display='';
+    return;
+  }
+  tbl.style.display=''; empty.style.display='none';
+
+  const TEAM_COLORS={'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
+  const ns='class="cell-num cell-num-blue"';
+
+  document.getElementById('ca-body').innerHTML = data.map(t=>{
+    const qpColor=t.qp>=95?'var(--green)':t.qp>=85?'var(--amber)':'var(--red)';
+    const bonusColor=t.totalBonus>0?'var(--green)':'var(--text-muted)';
+    const bg=TEAM_COLORS[t.teamNum]||'transparent';
+    const num=(v)=>v>0?`<span style="font-weight:700;color:var(--accent)">${v}</span>`:`<span style="color:var(--text-light)">0</span>`;
+    return `<tr>
+      <td><span class="cell-link cell-mono" style="font-size:0.72rem;font-weight:700">${t.id}</span></td>
+      <td>${t.name}</td>
+      <td style="background:${bg};font-weight:600">${t.team}</td>
+      <td style="text-align:center;background:${bg};font-size:0.68rem;color:var(--text-muted)">${t.teamNum}</td>
+      <td ${ns}>${num(t.initial)}</td>
+      <td ${ns}>${num(t.i3qa)}</td>
+      <td ${ns}>${num(t.rv)}</td>
+      <td ${ns}>${num(t.fix)}</td>
+      <td ${ns}>${num(t.missed)}</td>
+      <td ${ns}>${num(t.refix)}</td>
+      <td ${ns}>${num(t.warn)}</td>
+      <td class="cell-points">${t.points.toFixed(4)}</td>
+      <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
+      <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
+      <td class="cell-num" style="color:var(--accent)">${(t.bonusMult||0).toFixed(2)}</td>
+      <td class="cell-points" style="color:${bonusColor}">₱${t.totalBonus.toFixed(2)}</td>
+      <td style="font-size:0.68rem;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(t.projects||[]).join(', ')}">${(t.projects||[]).join(', ')}</td>
+    </tr>`;
+  }).join('');
+
+  // Foot totals
+  const sum=k=>data.reduce((s,t)=>s+(t[k]||0),0);
+  document.getElementById('ca-foot').innerHTML = `<tr>
+    <td colspan="4"><strong>TOTAL (${data.length} techs)</strong></td>
+    <td class="cell-num"><strong>${sum('initial')}</strong></td>
+    <td class="cell-num"><strong>${sum('i3qa')}</strong></td>
+    <td class="cell-num"><strong>${sum('rv')}</strong></td>
+    <td class="cell-num"><strong>${sum('fix')}</strong></td>
+    <td class="cell-num"><strong>${sum('missed')}</strong></td>
+    <td class="cell-num"><strong>${sum('refix')}</strong></td>
+    <td class="cell-num"><strong>${sum('warn')}</strong></td>
+    <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
+    <td colspan="3"></td>
+    <td class="cell-points" style="color:var(--green)"><strong>₱${sum('totalBonus').toFixed(2)}</strong></td>
+    <td></td>
+  </tr>`;
+}
+
+function exportCalcAllCSV(){
+  if(!calcAllData.length){ toast('Run Calculate first'); return; }
+  const cols=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','totalBonus'];
+  const lines=[cols.join(',')];
+  calcAllFiltered.forEach(t=>lines.push(cols.map(c=>`"${t[c]}"`).join(',')));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+  a.download=`calcall_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+function showLoading(msg){document.getElementById('loading-msg').textContent=msg||'Loading…';document.getElementById('loading-overlay').classList.add('show');}
+function hideLoading(){document.getElementById('loading-overlay').classList.remove('show');}
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3000);}
+function triggerFileInput(){document.getElementById('file-input-hidden').click();}
+
+// ═══════════════════════════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════════════════════════
+const dz=document.getElementById('dropzone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+document.getElementById('file-input-dz').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+document.getElementById('file-input-hidden').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+document.getElementById('save-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal('save-modal');});
+document.getElementById('import-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)cancelImport();});
+document.getElementById('settings-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings();});
+document.getElementById('add-tech-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal('add-tech-modal');});
+document.getElementById('project-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveProject();});
+
+// ═══════════════════════════════════════════════════════════════
+// DRILL-DOWN: click a stat number → see source rows
+// ═══════════════════════════════════════════════════════════════
+const DD_STAT_LABELS = {
+  initial: '# Initial Tagging', i3qa: '# i3QA', rv: '# RV',
+  fix: '# Fix', missed: '# Missed/Rework', refix: '# Refix', warn: '# Warn'
+};
+
+function openDrillDown(techId, stat) {
+  const tech = techRows.find(t => t.id === techId);
+  if (!tech || !tech._src) { toast('No source data available (project may need re-import)'); return; }
+  const rows = tech._src[stat] || [];
+  const cs = S.calcSettings;
+  const gsd = importSettings.gsd || '6in';
+  const isIR = importSettings.blocktype === 'IR';
+
+  // ── Title & subtitle ────────────────────────────────────────
+  document.getElementById('dd-title').textContent =
+    `${DD_STAT_LABELS[stat] || stat} — ${tech.name || techId} (${techId})`;
+  document.getElementById('dd-subtitle').textContent =
+    `${tech.team || ''}  ·  ${tech.month}  ·  GSD: ${gsd}  ·  Type: ${isIR?'IR':'Non-IR'}`;
+
+  // ── Formula card ─────────────────────────────────────────────
+  const formulaCard = document.getElementById('dd-formula-card');
+  const formulaBody = document.getElementById('dd-formula-body');
+  const ptPerFix = (getCatGsdValue('?', gsd) || '—');
+  const irTag = isIR ? ` × ${cs.irModifierValue} (IR)` : '';
+
+  const formulas = {
+    initial: [
+      [`Points per QC tag`, `${cs.points.qc} pts flat`],
+      [`Attribution`, `Goes to the QC_ID tech on each row`],
+      [`Total here`, `${rows.length} rows × ${cs.points.qc} = ${(rows.length * cs.points.qc).toFixed(4)} pts`],
+    ],
+    i3qa: [
+      [`Points per i3QA task`, `${cs.points.i3qa.toFixed(6)} pts flat (~1/12)`],
+      [`Attribution`, `Goes to the I3QA_ID tech`],
+      [`Total here`, `${rows.length} rows × ${cs.points.i3qa.toFixed(6)} = ${(rows.length * cs.points.i3qa).toFixed(4)} pts`],
+    ],
+    fix: [
+      [`Points per fix round`, `catValue[cat][${gsd}]${irTag}`],
+      [`Example (Cat 3, ${gsd})`, `${getCatGsdValue(3,gsd)}${isIR?' × '+cs.irModifierValue+' = '+(getCatGsdValue(3,gsd)*cs.irModifierValue).toFixed(4):' pts'}`],
+      [`Attribution`, `FIX1_ID … FIX5_ID — each round to its own tech`],
+      [`Note`, `Points vary by category — see column ➜`],
+    ],
+    rv: [
+      [`RV1 Non-IR`, `${cs.points.rv1} pts`],
+      [`RV1 IR/COMBO`, `${cs.points.rv1_combo} pts`],
+      [`RV2+ each`, `${cs.points.rv2} pts`],
+      [`Active rule`, isIR ? `IR mode → RV1 = ${cs.points.rv1_combo}` : `Non-IR mode → RV1 = ${cs.points.rv1}`],
+    ],
+    missed: [
+      [`Definition`, `I3QA_LABEL matches miss labels: ${S.detect.triggers.miss.labels.join(', ')}`],
+      [`Attribution`, `Attributed to the QC_ID tech (not the fix tech)`],
+      [`Effect`, `Counted in denominator of Quality % = hurts bonus`],
+      [`Total here`, `${rows.length} missed row${rows.length!==1?'s':''} attributed to this tech`],
+    ],
+    refix: [
+      [`Definition`, `RV label matches refix labels: ${S.detect.triggers.refix.labels.join(', ')}`],
+      [`Also`, `Any ZFIX${1}–5 ID columns present`],
+      [`Attribution`, `To the RV tech (label-based) or ZFIX tech`],
+      [`Effect`, `Adds to denominator of Quality % → lowers quality rate`],
+    ],
+    warn: [
+      [`Definition`, `RV warn column matches: ${S.detect.triggers.warning.labels.join(', ')}`],
+      [`Columns checked`, `${S.detect.triggers.warning.columns.join(', ')}`],
+      [`Attribution`, `Goes to the corresponding RV tech`],
+      [`Effect`, `Adds to denominator of Quality % → lowers quality rate`],
+    ],
+  };
+  const fItems = formulas[stat] || [[`Stat`, stat]];
+  formulaBody.innerHTML = fItems.map(([k,v]) =>
+    `<div><span style="font-weight:600;color:var(--text-muted)">${k}:</span></div><div>${v}</div>`
+  ).join('');
+  formulaCard.style.display = 'block';
+
+  // ── Table columns ─────────────────────────────────────────────
+  // Show point column only for tasks that actually earn points
+  const showPts = ['initial','i3qa','fix','rv'].includes(stat);
+  const COLS = ['UID','CATEGORY','QC_ID','I3QA_ID','FIX1_ID','FIX1_DATE','RV1_ID','RV1_LABEL','COMBO?'];
+  const LABELS = {UID:'UID',CATEGORY:'Cat','QC_ID':'QC Tech','I3QA_ID':'i3QA Tech',
+    FIX1_ID:'Fix1 Tech',FIX1_DATE:'Fix1 Date',RV1_ID:'RV1 Tech',RV1_LABEL:'RV1 Label','COMBO?':'COMBO'};
+
+  // header
+  document.getElementById('dd-head').innerHTML =
+    COLS.map(c=>`<th style="white-space:nowrap">${LABELS[c]||c}</th>`).join('')
+    + (showPts ? `<th style="text-align:right;background:#1e3a52;white-space:nowrap">Pts (this row)</th>` : '');
+
+  if (!rows.length) {
+    document.getElementById('dd-body').innerHTML =
+      `<tr><td colspan="${COLS.length + (showPts?1:0)}" style="text-align:center;padding:24px;color:var(--text-muted)">No source rows found</td></tr>`;
+    document.getElementById('dd-foot').innerHTML = '';
+    document.getElementById('dd-count').textContent = '0 rows';
+    document.getElementById('dd-formula-card').style.display = 'none';
+    document.getElementById('dd-jump-btn').style.display = 'none';
+    document.getElementById('drilldown-modal').classList.add('show');
+    return;
+  }
+
+  // normalize
+  const normalize = row => {
+    if (row.uid !== undefined) {
+      return { UID:row.uid, CATEGORY:row.category, QC_ID:row.qc_id,
+        I3QA_ID:row.i3qa_id, FIX1_ID:row.fix1_id, FIX1_DATE:row.fix1_date,
+        RV1_ID:row.rv1_id, RV1_LABEL:row.rv1_label, 'COMBO?':row.ir,
+        _processed:true, _allFix: [row.fix1_id, row._raw?.FIX2_ID, row._raw?.FIX3_ID, row._raw?.FIX4_ID, row._raw?.FIX5_ID].filter(Boolean)
+      };
+    }
+    return { ...row,
+      _allFix: [1,2,3,4,5].map(i=>row[`FIX${i}_ID`]).filter(Boolean)
+    };
+  };
+
+  // deduplicate
+  const seen = new Set(); const unique = [];
+  rows.forEach(r => {
+    const n = normalize(r);
+    const uid = n.UID||'';
+    if (!seen.has(uid)) { seen.add(uid); unique.push(n); }
+  });
+
+  // compute per-row point contribution for this stat
+  function rowPts(r) {
+    const cat = parseInt(r.CATEGORY) || 0;
+    const catVal = getCatGsdValue(cat, gsd);
+    const irM = isIR ? cs.irModifierValue : 1.0;
+    if (stat === 'initial') return cs.points.qc;
+    if (stat === 'i3qa')    return cs.points.i3qa;
+    if (stat === 'fix')     return catVal * irM;
+    if (stat === 'rv') {
+      // If this tech is RV1, award RV1 pts; else RV2+ pts — best approximation without round info
+      return isIR ? cs.points.rv1_combo : cs.points.rv1;
+    }
+    return 0;
+  }
+
+  let grandPts = 0;
+  document.getElementById('dd-body').innerHTML = unique.map(r => {
+    const uid = r.UID || '';
+    const irVal = r['COMBO?'];
+    const isAllIR = irVal === 'IR';
+    const isCombo = irVal === 'COMBO' || irVal === 'Y';
+    const irTag = isAllIR
+      ? '<span style="color:#b45309;font-weight:700;font-size:0.68rem;background:#fef3c7;padding:1px 4px;border-radius:3px;">IR</span>'
+      : isCombo
+      ? '<span style="color:#6d28d9;font-weight:700;font-size:0.68rem;background:#ede9fe;padding:1px 4px;border-radius:3px;">COMBO</span>'
+      : '—';
+    const pts = showPts ? rowPts(r) : 0;
+    grandPts += pts;
+    const cat = parseInt(r.CATEGORY)||0;
+    const catVal = showPts && stat==='fix' ? getCatGsdValue(cat, gsd) : null;
+    const ptsCellTitle = stat==='fix' && catVal!=null
+      ? `Cat ${cat} × ${gsd} = ${catVal}${isIR?' × '+cs.irModifierValue+' (IR)':''}`
+      : '';
+    return `<tr style="cursor:pointer" onclick="jumpToRow('${uid}')" title="Click to jump to this record in Tasks view">
+      ${COLS.map(c => {
+        if (c==='COMBO?') return `<td style="text-align:center">${irTag}</td>`;
+        if (c==='CATEGORY') return `<td><span class="cell-mono" style="font-size:0.7rem;font-weight:600;color:var(--accent)">${r[c]||'—'}</span></td>`;
+        const v = (r[c]||'—').toString();
+        const short = v.length>26 ? v.slice(0,24)+'…' : v;
+        // Highlight if this cell is the tech being drilled
+        const isThisTech = v === techId;
+        return `<td><span class="cell-mono" title="${v}" style="font-size:0.7rem${isThisTech?';font-weight:700;color:var(--green)':''}">${short}</span></td>`;
+      }).join('')}
+      ${showPts ? `<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.72rem;color:var(--accent);background:rgba(45,140,240,0.05);" title="${ptsCellTitle}">${pts.toFixed(4)}</td>` : ''}
+    </tr>`;
+  }).join('');
+
+  // totals footer
+  if (showPts) {
+    document.getElementById('dd-foot').innerHTML = `<tr style="background:var(--blue-light);">
+      <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;font-weight:700;color:var(--text);">
+        Total contribution from these ${unique.length} row${unique.length!==1?'s':''}
+      </td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.82rem;color:var(--accent);padding:8px 12px;">
+        ${grandPts.toFixed(4)} pts
+      </td>
+    </tr>`;
+  } else {
+    document.getElementById('dd-foot').innerHTML = `<tr style="background:#fef2f2;">
+      <td colspan="${COLS.length}" style="padding:8px 12px;font-size:0.75rem;color:var(--red);font-weight:600;">
+        ⚠ These ${unique.length} row${unique.length!==1?'s':''} reduce Quality % → hurts bonus payout
+      </td>
+    </tr>`;
+  }
+
+  document.getElementById('dd-count').textContent =
+    `${unique.length} unique row${unique.length!==1?'s':''}` +
+    (unique.length < rows.length ? ` (${rows.length} total, ${rows.length-unique.length} dupes hidden)` : '') +
+    (showPts ? ` · ${grandPts.toFixed(4)} pts total` : '');
+
+  document.getElementById('dd-jump-btn').style.display = unique.length === 1 ? 'inline-flex' : 'none';
+  if (unique.length === 1) {
+    document.getElementById('dd-jump-btn').onclick = () => jumpToRow(unique[0].UID||'');
+  }
+
+  document.getElementById('drilldown-modal').classList.add('show');
+}
+
+let _ddLastJumpUid = '';
+function jumpToRowFromDrilldown() {
+  closeModal('drilldown-modal');
+}
+
+
+function jumpToRow(uid) {
+  closeModal('drilldown-modal');
+  switchView('tasks');
+  const searchInput = document.getElementById('search-input');
+  searchInput.value = uid;
+  applyFilters();
+  setTimeout(()=>{
+    const match = document.querySelector('#table-body tr');
+    if(match) match.scrollIntoView({behavior:'smooth',block:'center'});
+  }, 120);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ABOUT / FORMULA MODAL
+// ═══════════════════════════════════════════════════════════════
+function openAboutModal() {
+  const cs = S.calcSettings;
+  const gsd = importSettings.gsd || '6in';
+  const isIR = importSettings.blocktype === 'IR';
+  const det = S.detect;
+
+  // ① Point sources table
+  const sources = [
+    ['QC Tech (QC_ID)', 'Present on row', cs.points.qc, `${cs.points.qc} pts flat per tagged row`],
+    ['i3QA Tech (I3QA_ID)', 'Present on row', cs.points.i3qa.toFixed(6), `~1/12 pts per row (~${cs.points.i3qa.toFixed(4)})`],
+    ['Fix Tech (FIX1–5_ID)', `Cat × ${gsd}${isIR?' × '+cs.irModifierValue+' IR':''}`, '(varies)', `catValue[cat][${gsd}]${isIR?' × '+cs.irModifierValue:''} per round`],
+    ['RV1 Tech (RV1_ID)', isIR?'IR mode active':'Non-IR mode', isIR?cs.points.rv1_combo:cs.points.rv1, `RV1 = ${isIR?cs.points.rv1_combo+' (IR)':cs.points.rv1+' (non-IR)'}`],
+    ['RV2+ Tech (RV2–4_ID)', 'Each additional RV', cs.points.rv2, `${cs.points.rv2} pts each`],
+  ];
+  document.getElementById('about-sources-body').innerHTML = sources.map(([role, cond, pts, formula], i) =>
+    `<tr style="background:${i%2===0?'var(--bg)':'var(--surface)'}">
+      <td style="padding:8px 12px;font-weight:600;">${role}</td>
+      <td style="padding:8px 12px;color:var(--text-muted)">${cond}</td>
+      <td style="padding:8px 12px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${pts}</td>
+      <td style="padding:8px 12px;color:var(--text-muted)">${formula}</td>
+    </tr>`
+  ).join('');
+
+  // ② Category × GSD table — highlight active GSD column
+  const GSDS = ['3in','4in','6in','9in'];
+  const GSD_EL = document.getElementById('about-gsd-highlight');
+  GSDS.forEach((g, gi) => {
+    const ths = document.querySelectorAll('#about-modal thead th');
+    // update headers to show active GSD
+  });
+  // Simpler: just rebuild header highlight
+  const irVal = cs.irModifierValue;
+  document.getElementById('about-ir-val').textContent = irVal;
+  document.getElementById('about-cat-body').innerHTML = Object.entries(cs.categoryValues).map(([cat, vals], i) => {
+    return `<tr style="background:${i%2===0?'var(--bg)':'var(--surface)'}">
+      <td style="padding:7px 14px;font-weight:700;color:var(--accent)">Cat ${cat}</td>
+      ${GSDS.map(g => {
+        const v = vals[g] || 0;
+        const isActive = g === gsd;
+        return `<td style="padding:7px 14px;text-align:right;font-family:'JetBrains Mono',monospace;${isActive?'font-weight:700;color:var(--accent);background:rgba(45,140,240,0.08)':''}">${v}</td>`;
+      }).join('')}
+      <td style="padding:7px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--amber);font-weight:600;">${(vals[gsd]||0)*irVal}</td>
+    </tr>`;
+  }).join('');
+
+  // ③ Detection labels
+  document.getElementById('about-detect-labels').innerHTML = [
+    [`Refix labels`, det.triggers.refix.labels.join(', '), `in cols: ${det.triggers.refix.columns.join(', ')}`],
+    [`Miss labels`, det.triggers.miss.labels.join(', '), `in cols: ${det.triggers.miss.columns.join(', ')}`],
+    [`Warning labels`, det.triggers.warning.labels.join(', '), `in cols: ${det.triggers.warning.columns.join(', ')}`],
+    [`QC Penalty`, det.triggers.qcPenalty.labels.join(', '), `in cols: ${det.triggers.qcPenalty.columns.join(', ')}`],
+  ].map(([k,v,c]) => `<div><b>${k}:</b> <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">${v}</code> <span style="color:var(--text-light);font-size:0.72rem">${c}</span></div>`).join('');
+
+  // ④ Threshold bonus
+  const thresholds = S.bonusThresholds || [];
+  document.getElementById('about-threshold-text').innerHTML = thresholds.length
+    ? `If quality % ≥ threshold, bonus uses the threshold's fixed % instead of the lookup table:<br>`
+      + thresholds.map(t => `Quality ≥ <b>${t.quality}%</b> → flat <b>${t.bonus}%</b> of (Points × Multiplier)`).join('<br>')
+    : 'No thresholds configured.';
+
+  // ⑤ Quality modifier table (first 20 entries)
+  const tiers = S.bonusTiers || [];
+  document.getElementById('about-quality-body').innerHTML = tiers.slice(0, 20).map((tier, i) => {
+    const next = tiers[i+1];
+    const lower = next ? next.quality : 0;
+    const effPct = Math.round(tier.bonus * 100);
+    const color = tier.bonus >= 1 ? 'var(--green)' : tier.bonus >= 0.8 ? 'var(--accent)' : tier.bonus >= 0.5 ? 'var(--amber)' : 'var(--red)';
+    return `<tr style="background:${i%2===0?'var(--bg)':'var(--surface)'}">
+      <td style="padding:6px 14px;font-family:'JetBrains Mono',monospace;font-weight:600">${tier.quality}%</td>
+      <td style="padding:6px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:${color};font-weight:700">${tier.bonus.toFixed(2)}</td>
+      <td style="padding:6px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:${color};font-weight:700">${effPct}%</td>
+      <td style="padding:6px 14px;color:var(--text-muted);font-size:0.74rem">Points × Multiplier × ${tier.bonus.toFixed(2)} = ${effPct}% payout</td>
+    </tr>`;
+  }).join('') + (tiers.length > 20 ? `<tr><td colspan="4" style="padding:8px 14px;color:var(--text-muted);font-size:0.72rem;text-align:center;">… ${tiers.length-20} more tiers — see ⚙ Settings &gt; Quality % Modifiers</td></tr>` : '');
+
+  // ⑥ Miss attribution text
+  document.getElementById('about-miss-text').innerHTML =
+    `When I3QA_LABEL matches <code style="background:#fecaca;padding:1px 5px;border-radius:3px;">${det.triggers.miss.labels.join(', ')}</code>, the miss is attributed to the <b>QC_ID tech</b> on that row — not the fix tech. `
+    + `This means the QC tech's missed count increases, hurting their Quality %. `
+    + `The fix tech is unaffected by misses.`;
+
+  document.getElementById('about-modal').classList.add('show');
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// NEW PROJECT MODAL
+// ═══════════════════════════════════════════════════════════════
+let npPendingFile = null;
+
+function openNewProjectModal() {
+  // Reset form
+  document.getElementById('np-name').value = '';
+  document.getElementById('np-non-ir').checked = true;
+  document.getElementById('np-ir-notice').style.display = 'none';
+  npResetDropzone();
+  document.getElementById('np-error').style.display = 'none';
+  npPendingFile = null;
+  // Reset chips to defaults
+  document.querySelectorAll('[data-group="np-site"]').forEach(c => {
+    c.classList.toggle('selected', c.dataset.val === 'Cebu');
+    c.classList.remove('green','amber','red','gray');
+  });
+  document.querySelectorAll('[data-group="np-gsd"]').forEach(c => {
+    c.classList.remove('selected','green','amber','red','gray');
+    if (c.dataset.val === '6in') { c.classList.add('selected','green'); }
+  });
+  document.getElementById('new-project-modal').classList.add('show');
+  setTimeout(() => document.getElementById('np-name').focus(), 100);
+
+  // Wire drag-and-drop on the dropzone
+  const dz = document.getElementById('np-dropzone');
+  dz.ondragover = e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; dz.style.background='#e8f4fd'; };
+  dz.ondragleave = () => { dz.style.borderColor='var(--border)'; dz.style.background='#f7f9fc'; };
+  dz.ondrop = e => {
+    e.preventDefault();
+    dz.style.borderColor='var(--border)'; dz.style.background='#f7f9fc';
+    const f = e.dataTransfer.files[0];
+    if (f) npSetFile(f);
+  };
+}
+
+function npResetDropzone() {
+  document.getElementById('np-dz-icon').textContent = '📂';
+  document.getElementById('np-dz-text').textContent = 'Drop .dbf or .zip here';
+  document.getElementById('np-dz-sub').textContent  = 'or click to browse';
+  const dz = document.getElementById('np-dropzone');
+  dz.style.borderColor = 'var(--border)';
+  dz.style.background  = '#f7f9fc';
+}
+
+function npSetFile(file) {
+  npPendingFile = file;
+  document.getElementById('np-dz-icon').textContent = '✅';
+  document.getElementById('np-dz-text').textContent = file.name;
+  document.getElementById('np-dz-sub').textContent  = (file.size/1024).toFixed(1) + ' KB — click to change';
+  document.getElementById('np-dropzone').style.borderColor = 'var(--green)';
+  document.getElementById('np-dropzone').style.background  = '#f0fdf4';
+  // Auto-fill project name from filename if blank
+  const nameInput = document.getElementById('np-name');
+  if (!nameInput.value.trim()) nameInput.value = file.name.replace(/\.(zip|dbf)$/i,'');
+}
+
+function npFileChosen(input) {
+  if (input.files[0]) npSetFile(input.files[0]);
+}
+
+function npBlocktypeChange() {
+  const isIR = document.getElementById('np-ir').checked;
+  const notice = document.getElementById('np-ir-notice');
+  notice.style.display = isIR ? 'block' : 'none';
+  notice.style.borderColor = 'var(--amber)'; notice.style.background = '#fef3c7'; notice.style.color = '#92400e';
+  notice.innerHTML = '⚡ <strong>IR Project:</strong> All fix task points will be multiplied by ×1.5. SQM is not used for IR projects.';
+}
+
+async function confirmNewProject() {
+  const name = document.getElementById('np-name').value.trim();
+  const errEl = document.getElementById('np-error');
+  errEl.style.display = 'none';
+
+  if (!name) { errEl.textContent = 'Please enter a project name.'; errEl.style.display = 'block'; return; }
+  if (!npPendingFile) { errEl.textContent = 'Please choose a DBF or ZIP file.'; errEl.style.display = 'block'; return; }
+
+  const blocktype = document.getElementById('np-ir').checked ? 'IR' : 'NON';
+  const site = document.querySelector('[data-group="np-site"].selected')?.dataset.val || 'Cebu';
+  const gsd  = document.querySelector('[data-group="np-gsd"].selected')?.dataset.val  || '6in';
+  const month = document.getElementById('np-month').value;
+  const year  = parseInt(document.getElementById('np-year').value) || new Date().getFullYear();
+
+  // Apply settings
+  importSettings = { site, gsd, blocktype, month, year, sqm: 0, name };
+  currentProjectName = name;
+
+  closeModal('new-project-modal');
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const buf = e.target.result;
+    let dbfBuffer = buf;
+    // If ZIP, extract the first .dbf
+    if (npPendingFile.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const zip = await JSZip.loadAsync(buf);
+        const dbfEntry = Object.values(zip.files).find(f => f.name.toLowerCase().endsWith('.dbf'));
+        if (!dbfEntry) { toast('No .dbf found in ZIP'); return; }
+        dbfBuffer = await dbfEntry.async('arraybuffer');
+      } catch(ex) { toast('Error reading ZIP: ' + ex.message); return; }
+    }
+    await loadBuffer(dbfBuffer, name);
+    // Auto-save to IndexedDB
+    const project = { name, createdAt: Date.now(), rowCount: allRows.length,
+      rows: allRows.map(r => ({...r, _raw: r._raw||{}})),
+      rawBuffer: dbfBuffer, importSettings: {...importSettings} };
+    try { await dbSave(project); await refreshProjectList(); toast(`✓ Created & saved "${name}"`); }
+    catch(ex) { console.error(ex); }
+  };
+  reader.readAsArrayBuffer(npPendingFile);
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// AUTO-DETECT CURRENT MONTH / YEAR ON LOAD
+// ═══════════════════════════════════════════════════════════════
+(function initDateDefaults() {
+  const now = new Date();
+  const yr  = now.getFullYear();
+  const mo  = now.toLocaleString('en-US', { month: 'long' }); // e.g. "June"
+  // Import modal
+  const impMonth = document.getElementById('imp-month');
+  const impYear  = document.getElementById('imp-year');
+  if (impMonth) { for (let o of impMonth.options) o.selected = (o.value === mo); }
+  if (impYear)  { impYear.value = yr; }
+  // New Project modal
+  const npMonth = document.getElementById('np-month');
+  const npYear  = document.getElementById('np-year');
+  if (npMonth) { for (let o of npMonth.options) o.selected = (o.value === mo || o.text === mo); }
+  if (npYear)  { npYear.value = yr; }
+})();
+
+openDB().then(refreshProjectList).catch(console.error);
+</script>
+</body>
+</html>
