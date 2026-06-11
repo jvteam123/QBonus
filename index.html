@@ -4482,18 +4482,27 @@ function openTechDetail(techId) {
   });
   const rvPtsTotal = rv1pts + rv2pts;
 
-  // Bonus tier table — all tiers with arrow pointing at active
+  // Bonus tier table — show only active tier ±3 context rows (no endless scrolling)
   const activeTierIdx = S.bonusTiers.findIndex(t => qp >= t.quality);
-  const tierRows = S.bonusTiers.map((tier, i) => {
+  const CONTEXT = 3; // rows above and below active
+  const lo = Math.max(0, activeTierIdx - CONTEXT);
+  const hi = Math.min(S.bonusTiers.length - 1, activeTierIdx + CONTEXT);
+  const tierRows = S.bonusTiers.slice(lo, hi + 1).map((tier, sliceI) => {
+    const i = lo + sliceI;
     const active = i === activeTierIdx;
-    const bg = active ? 'background:rgba(5,150,105,0.12);' : (i%2===0?'':'background:rgba(0,0,0,0.02);');
+    const bg = active ? 'background:rgba(5,150,105,0.12);' : (sliceI%2===0?'':'background:rgba(0,0,0,0.02);');
     const fw = active ? 'font-weight:700;' : 'color:var(--text-muted);';
     return `<tr style="${bg}${fw}">
       <td style="padding:5px 8px;">≥ ${tier.quality}%</td>
       <td style="padding:5px 8px;font-family:'JetBrains Mono',monospace;color:${active?'var(--green)':''};">${(tier.bonus*100).toFixed(0)}%</td>
-      <td style="padding:5px 8px;">${active?`← <b>your QP ${qp.toFixed(2)}% lands here</b>`:''}</td>
+      <td style="padding:5px 8px;">${active?`<b style="color:var(--green);">← your QP ${qp.toFixed(2)}% lands here</b>`:''}</td>
     </tr>`;
   }).join('');
+  // Ellipsis hints if there are hidden rows
+  const topEllipsis = lo > 0
+    ? `<tr><td colspan="3" style="padding:3px 8px;font-size:0.68rem;color:var(--text-light);text-align:center;">… ${lo} higher tier${lo>1?'s':''} above …</td></tr>` : '';
+  const botEllipsis = hi < S.bonusTiers.length - 1
+    ? `<tr><td colspan="3" style="padding:3px 8px;font-size:0.68rem;color:var(--text-light);text-align:center;">… ${S.bonusTiers.length-1-hi} lower tier${S.bonusTiers.length-1-hi>1?'s':''} below …</td></tr>` : '';
 
   // ── SECTION 0: Identity ───────────────────────────────────
   const sec0 = _detailSection('🪪','Tech Identity','var(--text-muted)','', `
@@ -4608,14 +4617,14 @@ function openTechDetail(techId) {
     ${_kv('= Denominator',        denom,      'var(--text)',   'Total of all fix-related events')}
     ${_formulaBox(`Fix Quality % = ${tech.fix} ÷ ${denom} = <b>${qp.toFixed(4)}%</b>`)}
     <div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:10px;">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:8px;">All Bonus Tiers — where does ${qp.toFixed(2)}% land?</div>
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:8px;">Bonus Tier — where does ${qp.toFixed(2)}% land? <span style="font-weight:400;color:var(--text-light);">(showing ±3 tiers around your position)</span></div>
       <table style="width:100%;border-collapse:collapse;font-size:0.74rem;border-radius:7px;overflow:hidden;border:1px solid var(--border);">
         <thead><tr style="background:var(--header-bg);color:var(--header-text);">
           <th style="padding:6px 10px;text-align:left;">QP % Threshold</th>
           <th style="padding:6px 10px;text-align:left;">Bonus Earned %</th>
           <th style="padding:6px 10px;text-align:left;">Status</th>
         </tr></thead>
-        <tbody>${tierRows}</tbody>
+        <tbody>${topEllipsis}${tierRows}${botEllipsis}</tbody>
       </table>
       ${threshApplied ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(5,150,105,0.1);border-radius:6px;border-left:3px solid var(--green);font-size:0.71rem;color:var(--green);">
         ★ <b>Threshold Override Active:</b> a minimum threshold bonus was applied instead of the tier value.
