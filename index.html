@@ -4892,7 +4892,8 @@ function openTechDetail(techId) {
   document.getElementById('tech-detail-modal').classList.add('show');
 }
 
-
+// ── Startup: open IndexedDB and populate the project list ──────
+openDB().then(refreshProjectList).catch(console.error);
 </script>
 
 <!-- ══════════════ CALC-ALL PER-PROJECT BREAKDOWN MODAL ══════════════ -->
