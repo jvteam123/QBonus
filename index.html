@@ -3162,10 +3162,16 @@ async function deleteProject(name){
 }
 
 async function refreshProjectList(){
-  const projects=await dbGetAll();
   const list=document.getElementById('project-list');
-  if(!projects.length){list.innerHTML='<div style="padding:8px 16px;font-size:0.72rem;color:rgba(255,255,255,0.25)">No saved projects yet</div>';return;}
-  projects.sort((a,b)=>b.createdAt-a.createdAt);
+  list.innerHTML=''; // always clear first before re-rendering
+  let projects=await dbGetAll();
+  if(!projects||!projects.length){list.innerHTML='<div style="padding:8px 16px;font-size:0.72rem;color:rgba(255,255,255,0.25)">No saved projects yet</div>';return;}
+  // Deduplicate by name — keep the one with the latest createdAt
+  const seen=new Map();
+  projects.forEach(p=>{
+    if(!seen.has(p.name)||p.createdAt>seen.get(p.name).createdAt) seen.set(p.name,p);
+  });
+  projects=[...seen.values()].sort((a,b)=>b.createdAt-a.createdAt);
   list.innerHTML=projects.map(p=>`
     <div class="project-item${p.name===currentProjectName?' active':''}" data-name="${p.name}" onclick="loadProject('${p.name.replace(/'/g,"\\'")}')">
       <span style="font-size:12px">📁</span>
@@ -4304,8 +4310,10 @@ async function confirmNewProject() {
       importSettings: {...importSettings},
       sourceFiles: npPendingFiles.map(f => f.name)
     };
-    try { await dbSave(project); await refreshProjectList(); toast(`✓ Created & saved "${name}" (${mergedRows.length} records from ${dbfBuffers.length} file${dbfBuffers.length > 1 ? 's' : ''})`); }
-    catch(ex) { console.error(ex); toast('Save error: '+ex.message); }
+    try {
+      await dbSave(project);
+      await refreshProjectList();
+    } catch(ex) { console.error(ex); toast('Save error: '+ex.message); }
 
   } catch(ex) {
     hideLoading();
