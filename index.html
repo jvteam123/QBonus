@@ -3259,9 +3259,15 @@ let calcAllSortDir = -1;
 let calcAllTeamFilter = '';
 
 async function initCalcAllView(){
-  const projects = await dbGetAll();
-  document.getElementById('ca-project-count').textContent =
-    `${projects.length} project${projects.length!==1?'s':''} in storage`;
+  try {
+    const projects = await dbGetAll();
+    const el = document.getElementById('ca-project-count');
+    if(el) el.textContent = `${projects.length} project${projects.length!==1?'s':''} in storage`;
+    // Auto-run calc if we have saved projects and no results yet
+    if(projects.length && !calcAllData.length){
+      await runCalcAll();
+    }
+  } catch(e){ console.warn('initCalcAllView error', e); }
 }
 
 async function runCalcAll(){
@@ -3287,13 +3293,15 @@ async function runCalcAll(){
 
     let rawRecords = [];
     try{
-      if(proj.rawBuffer){
-        rawRecords = parseDBF(proj.rawBuffer);
+      if(proj.rawRecords && proj.rawRecords.length){
+        rawRecords = proj.rawRecords;                        // new format (plain JSON)
+      } else if(proj.rawBuffer){
+        rawRecords = parseDBF(proj.rawBuffer);               // old single-file format
       } else if(proj.rows && proj.rows.length){
-        rawRecords = proj.rows.map(r=>r._raw||r);
+        rawRecords = proj.rows.map(r=>r._raw||r);            // legacy fallback
       }
     } catch(e){ console.warn('Failed to parse project', proj.name, e); continue; }
-    if(!rawRecords.length) continue;
+    if(!rawRecords.length){ console.warn('No records for project', proj.name); continue; }
 
     const savedSettings = {...importSettings};
     if(proj.importSettings) Object.assign(importSettings, proj.importSettings);
@@ -3314,7 +3322,7 @@ async function runCalcAll(){
       if(!c.projects.includes(proj.name)) c.projects.push(proj.name);
       // Store per-project breakdown for drill-down
       const denom = (t.fix||0) + (t.refix||0) + (t.warn||0);
-      const projQp = denom > 0 ? ((t.fix||0)/denom*100) : 0;
+      const projQp = denom > 0 ? ((t.fix||0)/denom*100) : 100;
       const projQualMod = calculateQualityModifier(projQp);
       const projThresh = getThresholdBonus(projQp);
       const projMult = mult;
@@ -3344,7 +3352,7 @@ async function runCalcAll(){
   calcAllData = Object.values(combined).map(c=>{
     c.points = Math.round(c.points*10000)/10000;
     const denom = c.fix + c.refix + c.warn;
-    c.qp = denom>0 ? (c.fix/denom*100) : 0;
+    c.qp = denom>0 ? (c.fix/denom*100) : 100;
     const qualMod = calculateQualityModifier(c.qp);
     const threshBonus = getThresholdBonus(c.qp);
     c.qualityPctMod = Math.round(qualMod*100*100)/100;
