@@ -2653,6 +2653,7 @@ async function loadBuffer(buffer,name){
   if(name)currentProjectName=name;
   updateStats(allRows);
   sortBy('total_points');
+  buildTeamChips();
   renderTechTable();
   document.getElementById('dropzone-wrap').style.display='none';
   document.getElementById('content-area').style.display='flex';
@@ -2688,6 +2689,7 @@ async function loadParsedRows(rawRecords, name, fileCount) {
   filtered.sort((a,b) => b.total_points - a.total_points);
   currentPage = 1;
   updateStats(allRows);
+  buildTeamChips();
   renderTable();
   renderTechTable();
   document.getElementById('dropzone-wrap').style.display = 'none';
@@ -3178,7 +3180,7 @@ async function loadProject(name){
     filtered=[...allRows];
     techRows=buildTechStats(allRows.map(r=>r._raw||r));
     filteredTech=[...techRows];
-    updateStats(allRows);sortBy('total_points');renderTechTable();
+    updateStats(allRows);sortBy('total_points');buildTeamChips();renderTechTable();
     document.getElementById('dropzone-wrap').style.display='none';
     document.getElementById('content-area').style.display='flex';
     document.getElementById('btn-save-project').style.display='';
