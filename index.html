@@ -478,7 +478,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           <table class="qb-table" id="tech-table">
             <thead>
               <tr>
-                <th></th>
+                <th style="width:36px;text-align:center;">👁</th>
                 <th onclick="sortTech('month')">Month / Project</th>
                 <th onclick="sortTech('id')">Tech ID</th>
                 <th onclick="sortTech('name')">Full Name</th>
@@ -560,6 +560,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <table class="qb-table" id="ca-main-table" style="display:none;">
               <thead>
                 <tr id="ca-header-row">
+                  <th style="width:36px;text-align:center;" title="View per-project breakdown">👁</th>
                   <th onclick="sortCalcAll('id')">Tech ID</th>
                   <th onclick="sortCalcAll('name')">Full Name</th>
                   <th onclick="sortCalcAll('team')">Team</th>
@@ -577,7 +578,6 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
                   <th onclick="sortCalcAll('baseBonus')" style="background:#0a2a1a;color:#6ee7b7;">Payout<br>w/o Mult</th>
                   <th onclick="sortCalcAll('totalBonus')" style="background:#0a1f0a;color:#34d399;">Payout<br>w/ Mult ×<span id="ca-mult-label">9.50</span></th>
                   <th onclick="sortCalcAll('projects')">Projects</th>
-                  <th style="text-align:center;width:48px;" title="View per-project breakdown">👁</th>
                 </tr>
               </thead>
               <tbody id="ca-body"></tbody>
@@ -2379,7 +2379,7 @@ function renderTechTable(){
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
       <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.05)">${(t.baseBonus||0).toFixed(4)}</td>
       <td class="cell-num" style="color:var(--text-muted)">${t.bonusMultiplier.toFixed(2)}</td>
-      <td class="cell-points" style="color:${bonusColor};background:rgba(5,150,105,0.06);font-weight:700">${t.totalBonus.toFixed(4)}</td>
+      <td class="cell-points" style="color:${bonusColor};background:rgba(5,150,105,0.12);font-weight:700;font-size:0.85rem;">₱ ${t.totalBonus.toFixed(4)}</td>
     </tr>`;
   }).join('');
   renderTechFoot(filteredTech);
@@ -2402,7 +2402,7 @@ function renderTechFoot(rows){
     <td colspan="2"></td>
     <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.05)"><strong>${sum('baseBonus').toFixed(4)}</strong></td>
     <td></td>
-    <td class="cell-points" style="color:var(--green);background:rgba(5,150,105,0.06)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
+    <td class="cell-points" style="color:var(--green);background:rgba(5,150,105,0.12);font-weight:700;font-size:0.85rem;"><strong>₱ ${sum('totalBonus').toFixed(4)}</strong></td>
   </tr>`;
 }
 
@@ -3263,8 +3263,8 @@ async function initCalcAllView(){
     const projects = await dbGetAll();
     const el = document.getElementById('ca-project-count');
     if(el) el.textContent = `${projects.length} project${projects.length!==1?'s':''} in storage`;
-    // Auto-run calc if we have saved projects and no results yet
-    if(projects.length && !calcAllData.length){
+    // Always re-run calc when entering the view if there are saved projects
+    if(projects.length){
       await runCalcAll();
     }
   } catch(e){ console.warn('initCalcAllView error', e); }
@@ -3400,7 +3400,7 @@ function applyCalcAllFilter(){
 function sortCalcAll(key){
   if(calcAllSortKey===key) calcAllSortDir*=-1; else { calcAllSortKey=key; calcAllSortDir=-1; }
   document.querySelectorAll('#ca-header-row th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));
-  const keys=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus','projects'];
+  const keys=['','id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus','projects'];
   const idx=keys.indexOf(key);
   const ths=document.querySelectorAll('#ca-header-row th');
   if(idx>=0&&ths[idx]) ths[idx].classList.add(calcAllSortDir===-1?'sort-desc':'sort-asc');
@@ -3440,6 +3440,7 @@ function renderCalcAllTable(data){
     const num=(v)=>v>0?`<span style="font-weight:700;color:var(--accent)">${v}</span>`:`<span style="color:var(--text-light)">0</span>`;
     const projList = (t.projects||[]).join(', ');
     return `<tr>
+      <td style="text-align:center;padding:4px 8px;"><button class="eye-btn" title="View per-project breakdown" onclick="openCalcAllProjectBreakdown('${t.id.replace(/'/g,"\\'")}')">👁</button></td>
       <td><span class="cell-link cell-mono" style="font-size:0.72rem;font-weight:700">${t.id}</span></td>
       <td>${t.name}</td>
       <td style="background:${bg};font-weight:600;color:var(--text)">${t.team}</td>
@@ -3454,17 +3455,16 @@ function renderCalcAllTable(data){
       <td class="cell-points">${t.points.toFixed(4)}</td>
       <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
-      <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.06)">${(t.baseBonus||0).toFixed(4)}</td>
-      <td class="cell-points" style="color:${bonusColor};background:rgba(5,150,105,0.08);font-weight:700">${t.totalBonus.toFixed(4)}</td>
+      <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.06);font-weight:600">${(t.baseBonus||0).toFixed(4)}</td>
+      <td class="cell-points" style="color:${bonusColor};background:rgba(5,150,105,0.12);font-weight:700;font-size:0.85rem;">₱ ${t.totalBonus.toFixed(4)}</td>
       <td style="font-size:0.68rem;color:var(--text-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${projList}">${(t.projects||[]).length} project${(t.projects||[]).length!==1?'s':''}</td>
-      <td style="text-align:center;padding:4px 8px;"><button class="eye-btn" title="View per-project breakdown" onclick="openCalcAllProjectBreakdown('${t.id.replace(/'/g,"\\'")}')">👁</button></td>
     </tr>`;
   }).join('');
 
   // Foot totals
   const sum=k=>data.reduce((s,t)=>s+(t[k]||0),0);
   document.getElementById('ca-foot').innerHTML = `<tr>
-    <td colspan="4"><strong>TOTAL (${data.length} techs)</strong></td>
+    <td colspan="5"><strong>TOTAL (${data.length} techs)</strong></td>
     <td class="cell-num"><strong>${sum('initial')}</strong></td>
     <td class="cell-num"><strong>${sum('i3qa')}</strong></td>
     <td class="cell-num"><strong>${sum('rv')}</strong></td>
@@ -3474,9 +3474,9 @@ function renderCalcAllTable(data){
     <td class="cell-num"><strong>${sum('warn')}</strong></td>
     <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
     <td colspan="2"></td>
-    <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.06)"><strong>${sum('baseBonus').toFixed(4)}</strong></td>
-    <td class="cell-points" style="color:var(--green);background:rgba(5,150,105,0.08)"><strong>${sum('totalBonus').toFixed(4)}</strong></td>
-    <td colspan="2"></td>
+    <td class="cell-points" style="color:var(--accent);background:rgba(14,165,233,0.06);font-weight:700"><strong>${sum('baseBonus').toFixed(4)}</strong></td>
+    <td class="cell-points" style="color:var(--green);background:rgba(5,150,105,0.12);font-weight:700;font-size:0.85rem;"><strong>₱ ${sum('totalBonus').toFixed(4)}</strong></td>
+    <td></td>
   </tr>`;
 }
 
@@ -3538,7 +3538,7 @@ function openCalcAllProjectBreakdown(techId) {
     <th class="cell-qp">Fix QP%</th>
     <th class="cell-num">Qual% Mod</th>
     <th class="cell-points" style="background:rgba(14,165,233,0.1);">Payout w/o Mult</th>
-    <th class="cell-points" style="background:rgba(5,150,105,0.1);">Payout w/ Mult</th>`;
+    <th class="cell-points" style="background:rgba(5,150,105,0.18);color:var(--green);font-weight:700;">Payout w/ Mult ₱</th>`;
 
   // Table body
   const num=(v)=>v>0?`<span style="font-weight:700;color:var(--accent)">${v}</span>`:`<span style="color:var(--text-light)">0</span>`;
@@ -3579,7 +3579,7 @@ function openCalcAllProjectBreakdown(techId) {
     <td class="cell-points"><strong>${sum('points').toFixed(4)}</strong></td>
     <td colspan="2"></td>
     <td class="cell-points" style="color:var(--accent);font-weight:700;background:rgba(14,165,233,0.08)"><strong>${sum('baseBonus').toFixed(4)}</strong></td>
-    <td class="cell-points" style="color:var(--green);font-weight:700;background:rgba(5,150,105,0.1)"><strong>₱ ${sum('totalBonus').toFixed(4)}</strong></td>
+    <td class="cell-points" style="color:var(--green);font-weight:700;background:rgba(5,150,105,0.18);font-size:0.9rem;"><strong>₱ ${sum('totalBonus').toFixed(4)}</strong></td>
   </tr>`;
 
   document.getElementById('ca-proj-modal').classList.add('show');
