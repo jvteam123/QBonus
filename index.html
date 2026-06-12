@@ -355,7 +355,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <!-- CONTENT -->
       <div id="content-area" style="display:none">
         <!-- Toolbar -->
-        <div class="toolbar">
+        <div class="toolbar" id="main-toolbar">
           <div class="toolbar-group">
             <div style="position:relative;display:inline-flex;align-items:center;">
               <svg style="position:absolute;left:9px;color:var(--text-light);pointer-events:none;flex-shrink:0;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -696,7 +696,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
         <div class="settings-info">Points per fix task = Category GSD Value × IR Modifier (if applicable). Values differ by GSD resolution — edit below then click Save.</div>
         <div style="overflow-x:auto;">
           <table class="mod-table">
-            <thead><tr><th>Cat</th><th>3in Value</th><th>4in Value</th><th>6in Value</th><th>9in Value</th><th>IR Modifier</th></tr></thead>
+            <thead><tr><th>Cat</th><th>3in Value</th><th>4in Value</th><th>6in Value</th><th>9in Value</th></tr></thead>
             <tbody id="cat-table-body"></tbody>
           </table>
         </div>
@@ -2353,9 +2353,10 @@ function renderFoot(rows){
 // ═══════════════════════════════════════════════════════════════
 // RENDER TECH TABLE
 // ═══════════════════════════════════════════════════════════════
-const isDark=document.documentElement.getAttribute('data-theme')==='dark';const TEAM_COLORS=isDark?{'T_63':'rgba(14,165,233,0.12)','T_115':'rgba(245,158,11,0.12)','T_57':'rgba(16,185,129,0.12)','T_116':'rgba(236,72,153,0.12)','T_123':'rgba(139,92,246,0.12)','T_114':'rgba(239,68,68,0.12)','T_64':'rgba(5,150,105,0.12)','T_122':'rgba(251,146,60,0.12)'}:{'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
 
 function renderTechTable(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const TEAM_COLORS=isDark?{'T_63':'rgba(14,165,233,0.12)','T_115':'rgba(245,158,11,0.12)','T_57':'rgba(16,185,129,0.12)','T_116':'rgba(236,72,153,0.12)','T_123':'rgba(139,92,246,0.12)','T_114':'rgba(239,68,68,0.12)','T_64':'rgba(5,150,105,0.12)','T_122':'rgba(251,146,60,0.12)'}:{'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
   const tbody=document.getElementById('tech-body');
   if(!filteredTech.length){tbody.innerHTML=`<tr><td colspan="19" class="empty-state"><p>No tech data.</p></td></tr>`;renderTechFoot([]);return;}
   tbody.innerHTML=filteredTech.map(t=>{
@@ -2511,7 +2512,7 @@ function switchView(v){
   document.getElementById('team-filter-bar').style.display=v==='tech'?'flex':'none';
   // Hide the single-project stats bar and search toolbar when viewing Calc All
   document.querySelector('.stats-bar').style.display=v==='calcall'?'none':'';
-  document.querySelectorAll('.toolbar')[0].style.display=v==='calcall'?'none':'';
+  document.getElementById('main-toolbar').style.display=v==='calcall'?'none':'';
   // Dim/disable project list items when in Calc All (they all feed the calc, none should load)
   document.getElementById('project-list').classList.toggle('calcall-mode', v==='calcall');
   document.getElementById('project-list-hint').classList.toggle('show', v==='calcall');
@@ -2655,9 +2656,12 @@ async function loadBuffer(buffer,name){
   renderTechTable();
   document.getElementById('dropzone-wrap').style.display='none';
   document.getElementById('content-area').style.display='flex';
+  document.getElementById('main-toolbar').style.display='';
+  document.querySelector('.stats-bar').style.display='';
   document.getElementById('btn-save-project').style.display='';
   currentRawFile=buffer;
   updateProjectBadge();
+  if(currentView==='calcall') switchView('tasks');
   hideLoading();
   toast(`✓ Loaded ${allRows.length.toLocaleString()} records · ${importSettings.gsd} · ${importSettings.site}`);
 }
@@ -2688,8 +2692,11 @@ async function loadParsedRows(rawRecords, name, fileCount) {
   renderTechTable();
   document.getElementById('dropzone-wrap').style.display = 'none';
   document.getElementById('content-area').style.display = 'flex';
+  document.getElementById('main-toolbar').style.display = '';
+  document.querySelector('.stats-bar').style.display = '';
   document.getElementById('btn-save-project').style.display = '';
   updateProjectBadge();
+  if(currentView==='calcall') switchView('tasks');
   hideLoading();
   const src = fileCount > 1 ? ` from ${fileCount} files` : '';
   toast(`✓ Loaded ${allRows.length.toLocaleString()} records${src} · ${importSettings.gsd} · ${importSettings.site}`);
@@ -2741,7 +2748,6 @@ function renderSettingsTables(){
       <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="v4" value="${row.v4}" /></td>
       <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="v6" value="${row.v6}" /></td>
       <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="v9" value="${row.v9}" /></td>
-      <td><input class="mod-input" data-table="cat" data-idx="${i}" data-field="irMod" value="${row.irMod}" /></td>
     </tr>`).join('');
 
   // Quality Modifiers — now driven by bonusTiers (from script.js)
@@ -2794,7 +2800,10 @@ function saveSettings(){
     if(tbl==='cat'){
       // map old field names v3/v4/v6/v9 → gsd keys
       const gsdMap={v3:'3in',v4:'4in',v6:'6in',v9:'9in'};
-      const cat=idx+1; const gKey=gsdMap[field]||field;
+      // derive the actual category number from the rendered catValuesArr order
+      const catValuesArr = Object.entries(S.calcSettings.categoryValues).map(([cat,vals])=>({cat:Number(cat)}));
+      const cat = catValuesArr[idx] ? catValuesArr[idx].cat : idx+1;
+      const gKey=gsdMap[field]||field;
       if(S.calcSettings.categoryValues[cat]) S.calcSettings.categoryValues[cat][gKey]=val;
     } else if(tbl==='bonus-tier'){
       // Save edited bonus % back to the tier (stored as fraction, input shows as %)
@@ -3226,6 +3235,8 @@ function applyTheme(theme){
   const btn = document.getElementById('theme-btn');
   if(btn){ btn.textContent = theme==='dark' ? '☀ Light' : '🌙 Dark'; }
   try{ localStorage.setItem('fp-theme', theme); } catch(e){}
+  // Re-render tech table so Team/Team# column colors reflect the new theme
+  if(typeof renderTechTable === 'function' && document.getElementById('tech-body')) renderTechTable();
 }
 function toggleTheme(){
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
@@ -3453,6 +3464,13 @@ function renderCalcAllTable(data){
     tbl.style.display='none'; empty.style.display='';
     return;
   }
+  if(!data.length){
+    tbl.style.display='none';
+    empty.style.display='';
+    empty.innerHTML='<p style="font-size:0.9rem;">No techs match your search.</p>';
+    return;
+  }
+  empty.innerHTML='<p style="font-size:0.9rem;">Run <b>Calculate All Projects</b> to see combined tech totals.</p>';
   tbl.style.display=''; empty.style.display='none';
 
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';const TEAM_COLORS=isDark?{'T_63':'rgba(14,165,233,0.12)','T_115':'rgba(245,158,11,0.12)','T_57':'rgba(16,185,129,0.12)','T_116':'rgba(236,72,153,0.12)','T_123':'rgba(139,92,246,0.12)','T_114':'rgba(239,68,68,0.12)','T_64':'rgba(5,150,105,0.12)','T_122':'rgba(251,146,60,0.12)'}:{'T_63':'#e8f4fd','T_115':'#fef3c7','T_57':'#d1fae5','T_116':'#fce7f3','T_123':'#ede9fe','T_114':'#fff1f2','T_64':'#ecfdf5','T_122':'#fff7ed'};
@@ -3509,7 +3527,16 @@ function exportCalcAllCSV(){
   if(!calcAllData.length){ toast('Run Calculate first'); return; }
   const cols=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus'];
   const lines=[cols.join(',')];
-  calcAllFiltered.forEach(t=>lines.push(cols.map(c=>`"${t[c]}"`).join(',')));
+  const numCols = new Set(['initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus']);
+  const floatCols = new Set(['points','qp','baseBonus','totalBonus']);
+  calcAllFiltered.forEach(t=>lines.push(cols.map(c=>{
+    const v=t[c];
+    if(numCols.has(c)){
+      const n=Number(v)||0;
+      return floatCols.has(c)?n.toFixed(4):String(n);
+    }
+    return `"${String(v??'').replace(/"/g,'""')}"`;
+  }).join(',')));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
   a.download=`calcall_${new Date().toISOString().slice(0,10)}.csv`;a.click();
