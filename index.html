@@ -2485,12 +2485,26 @@ function switchView(v){
   document.getElementById('nav-tasks').classList.toggle('active',v==='tasks');
   document.getElementById('nav-tech').classList.toggle('active',v==='tech');
   document.getElementById('nav-calcall').classList.toggle('active',v==='calcall');
+  // Calc All: always show content-area and hide dropzone so the view is reachable
+  // even when no single project is loaded in the current session (e.g. after refresh)
+  if(v==='calcall'){
+    document.getElementById('dropzone-wrap').style.display='none';
+    document.getElementById('content-area').style.display='flex';
+  } else {
+    // Switching back to tasks/tech: restore normal dropzone vs content state
+    const hasProject = allRows.length > 0;
+    document.getElementById('dropzone-wrap').style.display = hasProject ? 'none' : '';
+    document.getElementById('content-area').style.display = hasProject ? 'flex' : 'none';
+  }
   document.getElementById('view-tasks').style.display=v==='tasks'?'block':'none';
   document.getElementById('view-tech').style.display=v==='tech'?'block':'none';
   document.getElementById('view-calcall').style.display=v==='calcall'?'flex':'none';
   document.querySelector('.pagination-bar').style.display=v==='tasks'?'flex':'none';
   document.getElementById('bonus-panel-wrap').style.display=v==='tech'?'block':'none';
   document.getElementById('team-filter-bar').style.display=v==='tech'?'flex':'none';
+  // Hide the single-project stats bar and search toolbar when viewing Calc All
+  document.querySelector('.stats-bar').style.display=v==='calcall'?'none':'';
+  document.querySelectorAll('.toolbar')[0].style.display=v==='calcall'?'none':'';
   if(v==='tech'){buildTeamChips();recalcBonus();}
   if(v==='calcall'){initCalcAllView();}
 }
