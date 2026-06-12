@@ -288,7 +288,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div class="icon">📍</div>
       <h1>IC Fixpoints <span style="font-weight:400;color:rgba(255,255,255,0.45);font-size:0.72rem;margin-left:2px;letter-spacing:0.02em;">VIEWER · PHILI</span></h1>
     </div>
-    <span style="font-size:0.62rem;font-weight:700;color:rgba(14,165,233,0.7);background:rgba(14,165,233,0.1);padding:2px 7px;border-radius:4px;border:1px solid rgba(14,165,233,0.2);letter-spacing:0.06em;">v12.0</span>
+    <span style="font-size:0.62rem;font-weight:700;color:rgba(14,165,233,0.7);background:rgba(14,165,233,0.1);padding:2px 7px;border-radius:4px;border:1px solid rgba(14,165,233,0.2);letter-spacing:0.06em;">v9.0</span>
     <div id="project-badge">
       <span class="pb-site" id="pb-site">—</span>
       <span class="pb-gsd" id="pb-gsd">6in</span>
@@ -2840,17 +2840,19 @@ function saveSettings(){
   S.detect.triggers.qcPenalty.labels = splitLabels(document.getElementById('det-qcpen-labels').value);
   S.detect.triggers.qcPenalty.columns= splitLabels(document.getElementById('det-qcpen-cols').value);
   closeSettings();
-  // Recalculate everything
-  if(allRows.length>0 && currentRawFile){
+  // Recalculate everything — use currentRawRecords (works for both drag-drop and loaded projects)
+  if(allRows.length>0 && currentRawRecords.length){
     showLoading('Recalculating with new settings…');
     setTimeout(()=>{
-      const raw=parseDBF(currentRawFile);
-      allRows=processRecords(raw);
+      allRows=processRecords(currentRawRecords);
       filtered=[...allRows];
-      techRows=buildTechStats(allRows.map(r=>r._raw||r));
+      techRows=buildTechStats(currentRawRecords);
       filteredTech=[...techRows];
+      activeTeamFilter='';
       updateStats(allRows);
       applyFilters();
+      buildTeamChips();
+      renderTechTable();
       if(currentView==='tech')recalcBonus();
       hideLoading();
       toast('✓ Settings saved & points recalculated');
@@ -3222,8 +3224,13 @@ async function refreshProjectList(){
 // ═══════════════════════════════════════════════════════════════
 function downloadCSV(){
   const cols=['uid','category','ir','qc_id','i3qa_id','i3qa_label','fix1_id','fix1_date','fixed1','rv1_id','rv1_label','qa1_id','qa1_label','zfix_count','total_points'];
+  const numCols=new Set(['category','zfix_count','total_points']);
   const lines=[cols.join(',')];
-  filtered.forEach(r=>lines.push(cols.map(c=>`"${r[c]}"`).join(',')));
+  filtered.forEach(r=>lines.push(cols.map(c=>{
+    const v=r[c];
+    if(numCols.has(c)) return isNaN(Number(v))||v===''||v==null?'0':(c==='total_points'?Number(v).toFixed(4):String(Number(v)));
+    return `"${String(v??'').replace(/"/g,'""')}"`;
+  }).join(',')));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
   a.download=`${currentProjectName||'fixpoints'}_export.csv`;a.click();
