@@ -3140,8 +3140,11 @@ function openSaveModal(){
 function closeModal(id){document.getElementById(id||'save-modal').classList.remove('show');}
 
 async function saveProject(){
-  const name=document.getElementById('project-name-input').value.trim();
+  const name=document.getElementById('project-name-input').value.trim().replace(/\s+/g,' ');
   if(!name){alert('Enter a project name.');return;}
+  // Warn if a project with this name already exists
+  const existing = await dbGet(name);
+  if(existing && !confirm(`A project named "${name}" already exists. Overwrite it?`)) return;
   showLoading('Saving…');closeModal('save-modal');
   const project={
     name, createdAt:Date.now(), rowCount:allRows.length,
@@ -3204,11 +3207,15 @@ async function refreshProjectList(){
   list.innerHTML=''; // always clear first before re-rendering
   let projects=await dbGetAll();
   if(!projects||!projects.length){list.innerHTML='<div style="padding:8px 16px;font-size:0.72rem;color:rgba(255,255,255,0.25)">No saved projects yet</div>';return;}
-  // Deduplicate by name — keep the one with the latest createdAt
+  // Deduplicate by name (case-insensitive) — keep the one with the latest createdAt
   const seen=new Map();
   projects.forEach(p=>{
-    if(!seen.has(p.name)||p.createdAt>seen.get(p.name).createdAt) seen.set(p.name,p);
+    const key=p.name.trim().toLowerCase();
+    if(!seen.has(key)||p.createdAt>seen.get(key).createdAt) seen.set(key,p);
   });
+  // Purge any stale duplicates from IndexedDB silently
+  const keepNames=new Set([...seen.values()].map(p=>p.name));
+  projects.forEach(p=>{ if(!keepNames.has(p.name)) dbDelete(p.name).catch(()=>{}); });
   projects=[...seen.values()].sort((a,b)=>b.createdAt-a.createdAt);
   list.innerHTML=projects.map(p=>`
     <div class="project-item${p.name===currentProjectName?' active':''}" data-name="${p.name}" onclick="loadProject('${p.name.replace(/'/g,"\\'")}')">
@@ -4312,7 +4319,7 @@ function npBlocktypeChange() {
 }
 
 async function confirmNewProject() {
-  const name = document.getElementById('np-name').value.trim();
+  const name = document.getElementById('np-name').value.trim().replace(/\s+/g,' ');
   const errEl = document.getElementById('np-error');
   errEl.style.display = 'none';
 
