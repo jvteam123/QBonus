@@ -3084,10 +3084,11 @@ function openDB(){
     req.onerror=e=>rej(e);
   });
 }
-async function dbSave(p){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(p).onsuccess=()=>res();tx.onerror=e=>rej(e);});}
-async function dbGetAll(){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readonly');tx.objectStore(STORE).getAll().onsuccess=e=>res(e.target.result);tx.onerror=e=>rej(e);});}
-async function dbDelete(name){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(name).onsuccess=()=>res();tx.onerror=e=>rej(e);});}
-async function dbGet(name){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readonly');tx.objectStore(STORE).get(name).onsuccess=e=>res(e.target.result);tx.onerror=e=>rej(e);});}
+async function getDb(){if(!db) await openDB(); return db;}
+async function dbSave(p){const d=await getDb();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).put(p).onsuccess=()=>res();tx.onerror=e=>rej(e);});}
+async function dbGetAll(){const d=await getDb();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readonly');tx.objectStore(STORE).getAll().onsuccess=e=>res(e.target.result);tx.onerror=e=>rej(e);});}
+async function dbDelete(name){const d=await getDb();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(name).onsuccess=()=>res();tx.onerror=e=>rej(e);});}
+async function dbGet(name){const d=await getDb();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readonly');tx.objectStore(STORE).get(name).onsuccess=e=>res(e.target.result);tx.onerror=e=>rej(e);});}
 
 function openSaveModal(){
   document.getElementById('project-name-input').value=currentProjectName||'';
