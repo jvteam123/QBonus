@@ -2618,6 +2618,7 @@ async function loadBuffer(buffer,name){
   showLoading('Parsing fixpoint records…');
   await new Promise(r=>setTimeout(r,30));
   const raw=parseDBF(buffer);
+  currentRawRecords = raw; // store for saving
   allRows=processRecords(raw);
   filtered=[...allRows];
   currentBonusMultiplier=getSqmMultiplier(importSettings.sqm);
@@ -2641,8 +2642,12 @@ async function loadBuffer(buffer,name){
 function parseDbf(buffer) { return parseDBF(buffer); }
 
 // Load pre-parsed raw rows (used when merging multiple DBF files)
+// Global to hold the last-loaded raw DBF records (used for reliable project saving)
+let currentRawRecords = [];
+
 async function loadParsedRows(rawRecords, name, fileCount) {
   await new Promise(r => setTimeout(r, 30));
+  currentRawRecords = rawRecords; // store for saving
   allRows = processRecords(rawRecords);
   filtered = [...allRows];
   colFilters = {};
@@ -3101,11 +3106,13 @@ async function saveProject(){
   const name=document.getElementById('project-name-input').value.trim();
   if(!name){alert('Enter a project name.');return;}
   showLoading('Saving…');closeModal('save-modal');
-  const project={name,createdAt:Date.now(),rowCount:allRows.length,
-    rows:allRows.map(r=>({...r,_raw:r._raw||{}})),
-    rawBuffer:currentRawFile,importSettings:{...importSettings}};
+  const project={
+    name, createdAt:Date.now(), rowCount:allRows.length,
+    rawRecords: currentRawRecords.length ? currentRawRecords : allRows.map(r=>r._raw||{}),
+    importSettings:{...importSettings}
+  };
   try{await dbSave(project);currentProjectName=name;toast(`✓ Saved "${name}"`);await refreshProjectList();}
-  catch(e){console.error(e);toast('Error saving');}
+  catch(e){console.error(e);toast('Error saving: '+e.message);}
   hideLoading();
 }
 
@@ -3115,16 +3122,36 @@ async function loadProject(name){
   if(!proj){hideLoading();toast('Project not found');return;}
   if(proj.importSettings)importSettings={...proj.importSettings};
   currentProjectName=proj.name;
-  if(proj.rawBuffer){
-    await loadBuffer(proj.rawBuffer,proj.name);
-  } else {
-    allRows=proj.rows.map(r=>({...r,_raw:r._raw||{}}));
-    filtered=[...allRows];techRows=buildTechStats(allRows.map(r=>r._raw||r));filteredTech=[...techRows];
+
+  let rawRecords = null;
+
+  // Priority 1: rawRecords (new format — plain JSON objects, most reliable)
+  if(proj.rawRecords && proj.rawRecords.length){
+    rawRecords = proj.rawRecords;
+  }
+  // Priority 2: rawBuffer (old single-file format — re-parse the ArrayBuffer)
+  else if(proj.rawBuffer){
+    try { rawRecords = parseDBF(proj.rawBuffer); } catch(e){ console.warn('rawBuffer parse failed',e); }
+  }
+  // Priority 3: processed rows fallback (old format, degraded _raw)
+  if(rawRecords && rawRecords.length){
+    currentRawRecords = rawRecords;
+    await loadParsedRows(rawRecords, proj.name, 1);
+  } else if(proj.rows && proj.rows.length){
+    // Last resort: use processed rows (drill-down won't work but table will)
+    currentRawRecords = proj.rows.map(r=>r._raw||{});
+    allRows = proj.rows.map(r=>({...r,_raw:r._raw||{}}));
+    filtered=[...allRows];
+    techRows=buildTechStats(allRows.map(r=>r._raw||r));
+    filteredTech=[...techRows];
     updateStats(allRows);sortBy('total_points');renderTechTable();
     document.getElementById('dropzone-wrap').style.display='none';
     document.getElementById('content-area').style.display='flex';
     document.getElementById('btn-save-project').style.display='';
-    updateProjectBadge();hideLoading();toast(`✓ Loaded "${name}"`);
+    updateProjectBadge();hideLoading();
+    toast(`✓ Loaded "${name}" (legacy format — re-save to upgrade)`);
+  } else {
+    hideLoading();toast('❌ Project data missing — please re-import');return;
   }
   document.querySelectorAll('.project-item').forEach(el=>el.classList.toggle('active',el.dataset.name===name));
 }
@@ -4270,17 +4297,15 @@ async function confirmNewProject() {
     // Load the merged rows (loadParsedRows handles hideLoading + toast)
     await loadParsedRows(mergedRows, name, dbfBuffers.length);
 
-    // Save to IndexedDB — store the first raw buffer as reference; all rows merged
-    const firstBuffer = dbfBuffers[0].buffer;
+    // Save to IndexedDB — store all merged raw records for reliable reload
     const project = {
       name, createdAt: Date.now(), rowCount: allRows.length,
-      rows: allRows.map(r => ({...r, _raw: r._raw||{}})),
-      rawBuffer: firstBuffer,
+      rawRecords: mergedRows,
       importSettings: {...importSettings},
-      sourceFiles: npPendingFiles.map(f => f.name) // metadata
+      sourceFiles: npPendingFiles.map(f => f.name)
     };
     try { await dbSave(project); await refreshProjectList(); toast(`✓ Created & saved "${name}" (${mergedRows.length} records from ${dbfBuffers.length} file${dbfBuffers.length > 1 ? 's' : ''})`); }
-    catch(ex) { console.error(ex); }
+    catch(ex) { console.error(ex); toast('Save error: '+ex.message); }
 
   } catch(ex) {
     hideLoading();
