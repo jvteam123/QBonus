@@ -115,6 +115,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .project-item .pi-count{font-size:0.65rem;color:rgba(255,255,255,0.3);}
 .project-item .pi-del{opacity:0;font-size:11px;color:rgba(255,100,100,0.7);transition:opacity 0.1s;}
 .project-item:hover .pi-del{opacity:1;}
+/* Disabled project list in Calc All view */
+.project-list.calcall-mode .project-item{opacity:0.35;cursor:not-allowed;pointer-events:none;}
+.project-list.calcall-mode .project-item .pi-del{pointer-events:all;opacity:0;}
+.project-list.calcall-mode .project-item:hover{background:none;color:rgba(255,255,255,0.5);}
+.project-list-hint{display:none;padding:5px 14px 8px;font-size:0.65rem;color:rgba(255,255,255,0.3);font-style:italic;line-height:1.4;}
+.project-list.calcall-mode ~ .project-list-hint,.project-list-hint.show{display:block;}
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 /* DROPZONE */
@@ -330,6 +336,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div class="project-list" id="project-list">
         <div style="padding:8px 16px;font-size:0.72rem;color:rgba(255,255,255,0.25);">No saved projects yet</div>
       </div>
+      <div class="project-list-hint" id="project-list-hint">All projects included in calculation above</div>
     </div>
 
     <!-- MAIN -->
@@ -2505,6 +2512,9 @@ function switchView(v){
   // Hide the single-project stats bar and search toolbar when viewing Calc All
   document.querySelector('.stats-bar').style.display=v==='calcall'?'none':'';
   document.querySelectorAll('.toolbar')[0].style.display=v==='calcall'?'none':'';
+  // Dim/disable project list items when in Calc All (they all feed the calc, none should load)
+  document.getElementById('project-list').classList.toggle('calcall-mode', v==='calcall');
+  document.getElementById('project-list-hint').classList.toggle('show', v==='calcall');
   if(v==='tech'){buildTeamChips();recalcBonus();}
   if(v==='calcall'){initCalcAllView();}
 }
@@ -3131,6 +3141,7 @@ async function saveProject(){
 }
 
 async function loadProject(name){
+  if(currentView==='calcall'){toast('Switch to Fixpoint Tasks or Tech Summary to load a project');return;}
   showLoading('Loading…');
   const proj=await dbGet(name);
   if(!proj){hideLoading();toast('Project not found');return;}
