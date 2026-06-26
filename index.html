@@ -1981,6 +1981,8 @@ function buildTechStats(rawRecords) {
     const egregiousMissed = missedSrc.filter(r => {
       // r is a raw DBF record (flat keys) — no _raw wrapper
       const cat = parseInt(r.I3QA_CAT || r.CATEGORY || r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0);
+      const i3qaLbl = (r.I3QA_LABEL || r._raw?.I3QA_LABEL || r.i3qa_label || '').toString().trim().toUpperCase();
+      if (i3qaLbl === 'D') return false; // ignore rows where I3QA_LABEL = D
       return EGREGIOUS_CATS.includes(cat);
     });
     const drRule = I3_DR_TABLE.find(d => egregiousMissed.length >= d.min) || null;
@@ -1993,6 +1995,7 @@ function buildTechStats(rawRecords) {
       // r is a raw DBF record (flat keys) — no _raw wrapper
       const cat   = parseInt(r.I3QA_CAT || r.CATEGORY || r._raw?.I3QA_CAT || r._raw?.CATEGORY || r.category || 0);
       const label = (r.I3QA_LABEL || r._raw?.I3QA_LABEL || r.i3qa_label || '').toString().trim().toUpperCase();
+      if (label === 'D') return false; // ignore rows where I3QA_LABEL = D
       const isMiss = missLabelsList.includes(label);
       const f    = (r['FIXED1?'] || r.FIXED1 || r._raw?.['FIXED1?'] || r._raw?.FIXED1 || '').toString().trim().toUpperCase();
       const afp1 = (r.AFP1_STAT || r._raw?.AFP1_STAT || '').toString().trim().toUpperCase();
@@ -2257,6 +2260,8 @@ function buildTechSummary(rows) {
     const missedSrc = t._src?.missed || [];
     const egregiousMissed = missedSrc.filter(r=>{
       const cat=parseInt(r._raw?.I3QA_CAT||r._raw?.CATEGORY||r.category||0);
+      const i3qaLbl=(r._raw?.I3QA_LABEL||r.i3qa_label||'').toString().trim().toUpperCase();
+      if(i3qaLbl==='D') return false; // ignore rows where I3QA_LABEL = D
       return EGREGIOUS_CATS.includes(cat);
     });
     const drRule   = I3_DR_TABLE.find(d=>egregiousMissed.length>=d.min)||null;
@@ -2265,6 +2270,7 @@ function buildTechSummary(rows) {
     const egregiousDrq = i3qaSrc.filter(r=>{
       const cat  =parseInt(r._raw?.I3QA_CAT||r._raw?.CATEGORY||r.category||0);
       const label=(r._raw?.I3QA_LABEL||r.i3qa_label||'').toString().trim().toUpperCase();
+      if(label==='D') return false; // ignore rows where I3QA_LABEL = D
       const f    =(r._raw?.['FIXED1?']||r._raw?.FIXED1||'').toString().trim().toUpperCase();
       const afp1 =(r._raw?.AFP1_STAT||'').toString().trim().toUpperCase();
       return EGREGIOUS_CATS.includes(cat)&&missLbls.includes(label)&&(f==='N'||afp1==='AA');
@@ -3981,7 +3987,11 @@ function openDrillDown(techId, stat) {
       { min: 10, level:'DRQ1', deduct: -30 },
     ];
 
-    const egregiousRows = unique.filter(r => EGREGIOUS_CATS.includes(parseInt(r['I3QA_CAT'] || r['CATEGORY'] || 0)));
+    const egregiousRows = unique.filter(r => {
+      const i3qaLbl = (r['I3QA_LABEL'] || r.i3qa_label || '').toString().trim().toUpperCase();
+      if (i3qaLbl === 'D') return false; // ignore rows where I3QA_LABEL = D
+      return EGREGIOUS_CATS.includes(parseInt(r['I3QA_CAT'] || r['CATEGORY'] || 0));
+    });
     const eCount = egregiousRows.length;
     const totalCount = unique.length;
     const nonEgCount = totalCount - eCount;
