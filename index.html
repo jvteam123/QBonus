@@ -1685,6 +1685,19 @@ let TECH_ROSTER = {
   '7261PA':{name:'Patrick Aplicador',team:'Team Angelico',teamNum:'T_122'},
   '7262AP':{name:'Arnold Louie Pegoro',team:'Team Angelico',teamNum:'T_122'},
   '7253NR':{name:'Niño Yuson Ramil',team:'Team Angelico',teamNum:'T_122'},
+  '7809RR':{name:'Rodriguez, Raquel Alegre M.',team:'Team Jeave',teamNum:'T_123'},
+  '7794JJ':{name:'Jaralve, Josh C.',team:'Team Jack',teamNum:'T_64'},
+  '7802NM':{name:'Nikki Eleazar M. Morales',team:'Team Jack',teamNum:'T_64'},
+  '7804GP':{name:'Parame, Gian Carlo',team:'Team Nikki',teamNum:'T_114'},
+  '7783AB':{name:'Beatingo, Angielyn Angel B.',team:'Team Jeave',teamNum:'T_123'},
+  '7796GL':{name:'Laput, Gemar Del Mar',team:'Team Jeave',teamNum:'T_123'},
+  '7787TC':{name:'Cuizon Jr., Timotio',team:'Team Jack',teamNum:'T_64'},
+  '7779AA':{name:'Abella, Abegail D.',team:'Team Nikki',teamNum:'T_114'},
+  '7780NA':{name:'Aguhar, Niña Mae E.',team:'Team Jeave',teamNum:'T_123'},
+  '7795AJ':{name:'Adrian O. Jasmin',team:'Team Nikki',teamNum:'T_114'},
+  '7789ME':{name:'Edoloverio, Marjhon O.',team:'Team Jack',teamNum:'T_64'},
+  '7799JM':{name:'Malinas I Jr',team:'Team Nikki',teamNum:'T_114'},
+  '7810JS':{name:'Siodina, Jason Kim P.',team:'Team Nikki',teamNum:'T_114'},
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -3143,14 +3156,7 @@ function openSaveModal(){
   document.getElementById('save-modal').classList.add('show');
   setTimeout(()=>document.getElementById('project-name-input').focus(),100);
 }
-function closeModal(id){
-  document.getElementById(id||'save-modal').classList.remove('show');
-  // Remove the temporary "Back to Breakdown" button if closing tech-detail-modal
-  if(id==='tech-detail-modal'){
-    const bb=document.querySelector('#tech-detail-modal .modal-footer .btn-back-breakdown');
-    if(bb) bb.remove();
-  }
-}
+function closeModal(id){document.getElementById(id||'save-modal').classList.remove('show');}
 
 async function saveProject(){
   const name=document.getElementById('project-name-input').value.trim().replace(/\s+/g,' ');
@@ -3403,20 +3409,7 @@ async function runCalcAll(){
         qp: projQp, qualityPctMod: Math.round(projQualMod*100*100)/100,
         thresholdApplied: projThresh !== null,
         baseBonus: projBase, totalBonus: projTotal,
-        mult: projMult,
-        // Full tech snapshot for per-project detail modal
-        _techSnap: {
-          ...t,
-          points: Math.round((t.points||0)*10000)/10000,
-          pointsRaw: t.pointsRaw ?? Math.round((t.points||0)*10000)/10000,
-          qp: projQp,
-          qualityPctMod: Math.round(projQualMod*100*100)/100,
-          thresholdApplied: projThresh !== null,
-          baseBonus: projBase,
-          totalBonus: projTotal,
-          bonusMultiplier: projMult,
-        },
-        _importSettings: { ...(proj.importSettings || importSettings) },
+        mult: projMult
       });
     });
     Object.assign(importSettings, savedSettings);
@@ -3584,52 +3577,6 @@ function exportCalcAllCSV(){
   a.download=`calcall_${new Date().toISOString().slice(0,10)}.csv`;a.click();
 }
 
-
-// ═══════════════════════════════════════════════════════════════
-// CALC-ALL PER-PROJECT TECH DETAIL
-// Opens the full openTechDetail modal for a specific project row
-// from the per-project breakdown drill-down.
-// ═══════════════════════════════════════════════════════════════
-function openCalcAllTechDetail(techId, projectIdx) {
-  const tech = calcAllData.find(t => t.id === techId);
-  if (!tech) { toast('Tech not found'); return; }
-  const p = (tech.projectBreakdown || [])[projectIdx];
-  if (!p || !p._techSnap) { toast('Detail data not available for this project'); return; }
-
-  // Temporarily override context so openTechDetail reads the right project settings
-  const _savedTechRows    = techRows;
-  const _savedImport      = { ...importSettings };
-
-  // Inject a fake techRows entry with the per-project snapshot
-  techRows = [p._techSnap];
-
-  // Merge per-project import settings
-  Object.assign(importSettings, p._importSettings || {});
-
-  // Close the breakdown modal and open the detail modal
-  closeModal('ca-proj-modal');
-  openTechDetail(techId);
-
-  // Restore original state immediately after the modal is shown
-  techRows        = _savedTechRows;
-  Object.assign(importSettings, _savedImport);
-
-  // Update the subtitle to show which project this detail is for
-  const subtitle = document.getElementById('td-subtitle');
-  if (subtitle) {
-    subtitle.textContent = subtitle.textContent + '  ·  📁 ' + p.project;
-  }
-  // Add a "← Back to Breakdown" button in the modal footer
-  const footer = document.querySelector('#tech-detail-modal .modal-footer');
-  if (footer && !footer.querySelector('.btn-back-breakdown')) {
-    const backBtn = document.createElement('button');
-    backBtn.className = 'btn btn-ghost btn-back-breakdown';
-    backBtn.textContent = '← Back to Breakdown';
-    backBtn.onclick = () => { closeModal('tech-detail-modal'); openCalcAllProjectBreakdown(techId); };
-    footer.insertBefore(backBtn, footer.firstChild);
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════
 // CALC-ALL PER-PROJECT BREAKDOWN MODAL
 // ═══════════════════════════════════════════════════════════════
@@ -3664,7 +3611,6 @@ function openCalcAllProjectBreakdown(techId) {
 
   // Table header
   document.getElementById('capj-head').innerHTML = `
-    <th style="width:36px;text-align:center;" title="View full detail">👁</th>
     <th style="min-width:180px;">Project</th>
     <th style="text-align:center;">GSD</th>
     <th style="text-align:center;">Type</th>
@@ -3687,9 +3633,7 @@ function openCalcAllProjectBreakdown(techId) {
     const qpColor = p.qp>=95?'var(--green)':p.qp>=85?'var(--amber)':'var(--red)';
     const bonusColor = p.totalBonus>0?'var(--green)':'var(--text-muted)';
     const typeBg = p.blocktype==='IR' ? 'var(--amber)' : '#6b7a8d';
-    const hasSnap = !!p._techSnap;
     return `<tr style="background:${i%2===0?'var(--surface)':'var(--surface2)'}">
-      <td style="text-align:center;padding:4px 8px;">${hasSnap?`<button class="eye-btn" title="View full calculation detail for this project" onclick="openCalcAllTechDetail('${techId.replace(/'/g,"\'")}',${i})">👁</button>`:'<span style="color:var(--text-light);font-size:11px;">—</span>'}</td>
       <td><span style="font-size:0.75rem;font-weight:600;color:var(--text)">${p.project}</span></td>
       <td style="text-align:center;"><span style="font-size:0.7rem;padding:2px 7px;border-radius:4px;background:var(--blue-light);color:var(--accent);font-weight:700;">${p.gsd||'—'}</span></td>
       <td style="text-align:center;"><span style="font-size:0.7rem;padding:2px 7px;border-radius:4px;background:${typeBg};color:#fff;font-weight:700;">${p.blocktype||'—'}</span></td>
@@ -3711,7 +3655,7 @@ function openCalcAllProjectBreakdown(techId) {
   // Footer totals
   const sum=k=>breakdown.reduce((s,p)=>s+(p[k]||0),0);
   document.getElementById('capj-foot').innerHTML = `<tr style="background:var(--surface2);border-top:2px solid var(--border);">
-    <td colspan="4"><strong>TOTAL (${breakdown.length} projects)</strong></td>
+    <td colspan="3"><strong>TOTAL (${breakdown.length} projects)</strong></td>
     <td class="cell-num"><strong>${sum('initial')}</strong></td>
     <td class="cell-num"><strong>${sum('i3qa')}</strong></td>
     <td class="cell-num"><strong>${sum('rv')}</strong></td>
