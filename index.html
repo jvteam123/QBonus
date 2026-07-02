@@ -532,6 +532,13 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <button class="btn btn-ghost" onclick="exportCalcAllCSV()" style="gap:6px;" title="Downloads a summary report (one row per tech) — this is for payroll/reporting only and can't be re-imported as a project.">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV</button>
+            <button class="btn btn-ghost" onclick="exportCalcAllFullData()" style="gap:6px;" title="Downloads EVERYTHING behind this calculation — every project's raw rows, per-project breakdowns, and DR/DRQ triggers — as a .json file. Load it back later with 'Load Full Data' and every number, per-project breakdown, and drill-down modal will work exactly as it does right now, with no need to re-run Calculate All.">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Save Full Data</button>
+            <button class="btn btn-ghost" onclick="document.getElementById('ca-full-data-input').click()" style="gap:6px;" title="Load a .json file previously saved with 'Save Full Data' — restores the full calculation, including drill-down, without re-running Calculate All.">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Load Full Data</button>
+            <input type="file" id="ca-full-data-input" accept=".json" style="display:none" onchange="importCalcAllFullData(this)" />
           </div>
           <!-- Calc All Team Filter -->
           <div id="ca-team-filter-bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
@@ -3663,6 +3670,75 @@ function exportCalcAllCSV(){
   a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
   a.download=`calcall_${new Date().toISOString().slice(0,10)}.csv`;a.click();
   toast(`✓ Exported ${calcAllData.length} techs across all projects`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALC-ALL FULL DATA (JSON) — a complete, drill-down-capable snapshot
+// ═══════════════════════════════════════════════════════════════
+// Unlike exportCalcAllCSV() (a flat summary report, one row per tech,
+// with no per-fixpoint detail), this exports the ENTIRE calcAllData
+// structure: every project's raw source rows behind the i3qa/missed/
+// refix/warn counts (srcI3qa/srcMissed/srcRefix/srcWarn), the full
+// per-project breakdown, and the DR/DRQ trigger history. Re-loading this
+// file with importCalcAllFullData() restores the calculation exactly —
+// the "View per-project breakdown" (👁) and row-level drill-down modals
+// keep working, with no need to re-run Calculate All against saved
+// projects.
+function exportCalcAllFullData(){
+  if(!calcAllData.length){ toast('Run Calculate first'); return; }
+  const payload = {
+    type: 'fixpoints-calcall-full-data',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    multiplier: Number(document.getElementById('ca-mult').value) || 9.5,
+    techCount: calcAllData.length,
+    data: calcAllData
+  };
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(payload)],{type:'application/json'}));
+  a.download=`calcall_full_${new Date().toISOString().slice(0,10)}.json`;a.click();
+  toast(`✓ Saved full data for ${calcAllData.length} techs (with drill-down) across all projects`);
+}
+
+async function importCalcAllFullData(input){
+  const file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  showLoading('Loading full calc-all data…');
+  try{
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const data = Array.isArray(payload) ? payload : payload.data; // tolerate a bare array too
+    if(!Array.isArray(data) || !data.length){
+      hideLoading();
+      toast('❌ That file doesn\'t look like a "Save Full Data" export from Calculate All.');
+      return;
+    }
+    calcAllData = data;
+    if(payload.multiplier) document.getElementById('ca-mult').value = Number(payload.multiplier).toFixed(2);
+
+    const allProjects = [...new Set(calcAllData.flatMap(t=>t.projects||[]))];
+    document.getElementById('cas-techs').textContent = calcAllData.length;
+    document.getElementById('cas-points').textContent = calcAllData.reduce((s,t)=>s+(t.points||0),0).toFixed(2);
+    document.getElementById('cas-initial').textContent = calcAllData.reduce((s,t)=>s+(t.initial||0),0);
+    document.getElementById('cas-i3qa').textContent = calcAllData.reduce((s,t)=>s+(t.i3qa||0),0);
+    document.getElementById('cas-rv').textContent = calcAllData.reduce((s,t)=>s+(t.rv||0),0);
+    document.getElementById('cas-fix').textContent = calcAllData.reduce((s,t)=>s+(t.fix||0),0);
+    document.getElementById('cas-missed').textContent = calcAllData.reduce((s,t)=>s+(t.missed||0),0);
+    document.getElementById('cas-refix').textContent = calcAllData.reduce((s,t)=>s+(t.refix||0),0);
+    document.getElementById('cas-bonus').textContent = calcAllData.reduce((s,t)=>s+(t.totalBonus||0),0).toFixed(4);
+    document.getElementById('cas-projects').textContent = allProjects.length;
+    document.getElementById('ca-stats-bar').style.display = '';
+
+    buildCalcAllTeamChips();
+    applyCalcAllFilter();
+    hideLoading();
+    toast(`✓ Loaded full data — ${calcAllData.length} techs across ${allProjects.length} projects (drill-down restored)`);
+  } catch(ex){
+    hideLoading();
+    toast('❌ Failed to load file: ' + ex.message);
+    console.error(ex);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
