@@ -529,7 +529,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             </div>
             <div class="toolbar-spacer" style="flex:1"></div>
             <span id="ca-project-count" style="font-size:0.75rem;color:var(--text-muted);margin-right:8px;"></span>
-            <button class="btn btn-ghost" onclick="exportCalcAllCSV()" style="gap:6px;">
+            <button class="btn btn-ghost" onclick="exportCalcAllCSV()" style="gap:6px;" title="Downloads a summary report (one row per tech) — this is for payroll/reporting only and can't be re-imported as a project.">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV</button>
           </div>
@@ -4767,6 +4767,24 @@ async function confirmNewProject() {
 
     document.getElementById('loading-msg').textContent = `Merging ${mergedRows.length.toLocaleString()} records…`;
     await new Promise(r => setTimeout(r, 20));
+
+    // Guard against accidentally re-importing a REPORT csv (e.g. the
+    // "Calculate All" export, which is one row per tech with columns like
+    // id/name/points, not one row per fixpoint with a UID) — importing that
+    // shape here silently produces a project where every row looks empty.
+    const firstKeys = mergedRows.length ? Object.keys(mergedRows[0]) : [];
+    const looksLikeRowData = firstKeys.includes('UID');
+    const looksLikeCalcAllReport = !looksLikeRowData &&
+      (firstKeys.includes('ID') && firstKeys.includes('NAME') && (firstKeys.includes('TOTALBONUS') || firstKeys.includes('QUALITYPCTMOD')));
+    if (mergedRows.length && !looksLikeRowData) {
+      hideLoading();
+      const msg = looksLikeCalcAllReport
+        ? '❌ That looks like a "Calculate All" summary export (one row per tech), not fixpoint row data — it can\'t be re-imported as a project. Use the CSV exported from the Tasks view instead (or the original .dbf/.zip).'
+        : '❌ That CSV doesn\'t have a UID column, so it isn\'t fixpoint row data. Only re-import CSVs exported via "Export CSV" from the Tasks view (or the original .dbf/.zip).';
+      toast(msg);
+      document.getElementById('new-project-modal').classList.add('show');
+      return;
+    }
 
     // Load the merged rows (loadParsedRows handles hideLoading + toast)
     await loadParsedRows(mergedRows, name, dbfBuffers.length);
