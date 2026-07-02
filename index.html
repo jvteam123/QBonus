@@ -2567,7 +2567,7 @@ function switchView(v,opts){
   document.getElementById('project-list-hint').classList.toggle('show', v==='calcall');
   if(v==='tech'){buildTeamChips();recalcBonus();}
   // Skip the auto Calculate-All recompute when we're navigating in specifically
-  // to view one "Load Full Data" project (see viewCalcAllProject) — that
+  // to view one "Load Full Data" project (see openFullDataProject) — that
   // recompute only covers raw-row saved projects and would otherwise silently
   // discard the loaded full-data snapshot and reset the project filter we
   // just set, which is why Fixpoint Tasks/Tech Summary → a "(loaded)" project
@@ -3348,7 +3348,7 @@ async function refreshProjectList(){
   projects.forEach(p=>{ if(!keepNames.has(p.name)) dbDelete(p.name).catch(()=>{}); });
   projects=[...seen.values()].sort((a,b)=>b.createdAt-a.createdAt);
   list.innerHTML=projects.map(p=>`
-    <div class="project-item${p.fromFullData?' from-full-data':''}${(p.fromFullData ? p.name===calcAllProjectFilter : p.name===currentProjectName) ? ' active':''}" data-name="${p.name}" title="${p.fromFullData ? 'Loaded from a Calculate-All full-data file — click to view this project on its own. No raw rows, so row-level drill-down is limited to what the file captured.' : p.name}" onclick="${p.fromFullData ? `viewCalcAllProject('${p.name.replace(/'/g,"\\'")}')` : `loadProject('${p.name.replace(/'/g,"\\'")}')`}">
+    <div class="project-item${p.fromFullData?' from-full-data':''}${(p.fromFullData ? p.name===(currentView==='calcall'?calcAllProjectFilter:currentProjectName) : p.name===currentProjectName) ? ' active':''}" data-name="${p.name}" title="${p.fromFullData ? 'Loaded from a Calculate-All full-data file — click to view its Tech Summary (or, while in Calc All, to filter to just this project). No raw rows, so row-level drill-down is limited to what the file captured.' : p.name}" onclick="${p.fromFullData ? `openFullDataProject('${p.name.replace(/'/g,"\\'")}')` : `loadProject('${p.name.replace(/'/g,"\\'")}')`}">
       <span style="font-size:12px">${p.fromFullData ? '📄' : '📁'}</span>
       <span class="pi-name" title="${p.name}">${p.name}${p.fromFullData ? ' <span style=\"opacity:.55;font-weight:400;\">(loaded)</span>' : ''}</span>
       <span class="pi-count">${(p.rowCount||'?').toLocaleString()}</span>
@@ -3683,21 +3683,73 @@ function getCalcAllProjectScopedData(projectName){
     .filter(Boolean);
 }
 
-function viewCalcAllProject(name){
-  calcAllProjectFilter = name;
-  if(currentView!=='calcall'){
-    // skipRecalc: jumping here from Fixpoint Tasks / Tech Summary must NOT
-    // trigger a fresh Calculate All — that only recomputes from raw-row
-    // saved projects, so it would wipe out any "Load Full Data" snapshot
-    // and reset calcAllProjectFilter right after we just set it above.
-    switchView('calcall', {skipRecalc:true});
-  }
+// Called when clicking a "loaded from full data" (📄) project in the
+// sidebar. These placeholders have no raw rows — only the aggregated
+// per-project breakdown captured in calcAllData — so a true row-level
+// Fixpoint Tasks table can't be reconstructed. Tech Summary numbers CAN be
+// reconstructed (they're tech-level, exactly what the breakdown stores), so
+// that's what both the Fixpoint Tasks and Tech Summary nav items render.
+function openFullDataProject(name){
   document.querySelectorAll('.project-item').forEach(el=>el.classList.toggle('active', el.dataset.name===name));
-  buildCalcAllTeamChips();
-  if(!calcAllData.some(t=>(t.projects||[]).includes(name))){
-    toast(`📄 "${name}" isn't loaded into this session yet — use "Load Full Data" (top bar) to load its saved snapshot.`);
+
+  // Already in Calc All → keep the existing per-project filter behavior there.
+  if(currentView==='calcall'){
+    calcAllProjectFilter = name;
+    buildCalcAllTeamChips();
+    if(!calcAllData.some(t=>(t.projects||[]).includes(name))){
+      toast(`📄 "${name}" isn't loaded into this session yet — use "Load Full Data" (top bar) to load its saved snapshot.`);
+    }
+    applyCalcAllFilter();
+    return;
   }
-  applyCalcAllFilter();
+
+  const scoped = getCalcAllProjectScopedData(name);
+  if(!scoped.length){
+    toast(`📄 "${name}" isn't loaded into this session yet — use "Load Full Data" (top bar) to load its saved snapshot first.`);
+    return;
+  }
+
+  // Reuse the multiplier Calc All used for this data, so the numbers shown
+  // here match "Calc All Projects" for the same project.
+  const mult = scoped[0].bonusMult;
+  const multInput = document.getElementById('bp-manual-mult');
+  if(mult!=null && multInput) multInput.value = Number(mult).toFixed(2);
+
+  techRows = scoped.map(t=>({
+    ...t,
+    bonusMultiplier: t.bonusMult!=null ? t.bonusMult : currentBonusMultiplier,
+    drDeduct: t.drDeduct||0,
+    drqDeduct: t.drqDeduct||0,
+    month: t.month||'',
+    _src: null // no raw rows — drill-down icons show "no source data" instead of breaking
+  }));
+  currentProjectName = name;
+  allRows = []; filtered = []; currentRawRecords = [];
+  updateStats([]); // row-level stat tiles don't apply here — zero them instead of leaving stale numbers
+
+  if(currentView!=='tech'){
+    switchView('tech');
+    toast(`📄 "${name}" has no raw task rows (loaded from Full Data) — showing its Tech Summary instead.`);
+  } else {
+    buildTeamChips();
+    recalcBonus();
+    toast(`✓ Showing "${name}" (loaded from Full Data)`);
+  }
+
+  // Lightweight badge — full import settings (site/GSD/type) aren't captured
+  // in a Full Data snapshot, so just surface the project name.
+  const badge=document.getElementById('project-badge');
+  if(badge){
+    badge.style.display='flex';
+    document.getElementById('pb-site').textContent='—';
+    document.getElementById('pb-gsd').textContent='—';
+    const typeEl=document.getElementById('pb-type');
+    typeEl.textContent='Loaded'; typeEl.className='pb-type non';
+    document.getElementById('pb-name').textContent=name;
+  }
+  document.getElementById('btn-save-project').style.display='none';
+  document.getElementById('dropzone-wrap').style.display='none';
+  document.getElementById('content-area').style.display='flex';
 }
 
 function clearCalcAllProjectFilter(){
