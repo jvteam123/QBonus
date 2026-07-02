@@ -3445,7 +3445,10 @@ async function runCalcAll(){
         combined[key] = {
           id:t.id, name:t.name, team:t.team, teamNum:t.teamNum,
           initial:0, i3qa:0, rv:0, fix:0, missed:0, refix:0, warn:0,
-          points:0, projects:[], projectBreakdown:[]
+          points:0, projects:[], projectBreakdown:[],
+          // Raw rows behind the i3qa/missed/refix/warn counts, tagged with
+          // their originating project, for the drill-down modal.
+          srcI3qa:[], srcMissed:[], srcRefix:[], srcWarn:[]
         };
       }
       const c = combined[key];
@@ -3453,6 +3456,10 @@ async function runCalcAll(){
       c.fix += t.fix||0; c.missed += t.missed||0; c.refix += t.refix||0;
       c.warn += t.warn||0; c.points += t.points||0;
       if(!c.projects.includes(proj.name)) c.projects.push(proj.name);
+      (t._src?.i3qa||[]).forEach(r=>c.srcI3qa.push({project:proj.name, row:r}));
+      (t._src?.missed||[]).forEach(r=>c.srcMissed.push({project:proj.name, row:r}));
+      (t._src?.refix||[]).forEach(r=>c.srcRefix.push({project:proj.name, row:r}));
+      (t._src?.warn||[]).forEach(r=>c.srcWarn.push({project:proj.name, row:r}));
       // Store per-project breakdown for drill-down
       const denom = (t.fix||0) + (t.refix||0) + (t.warn||0);
       const projQp = denom > 0 ? ((t.fix||0)/denom*100) : 100;
@@ -3578,6 +3585,7 @@ function renderCalcAllTable(data){
     const bonusColor=t.totalBonus>0?'var(--green)':'var(--text-muted)';
     const bg=TEAM_COLORS[t.teamNum]||'transparent';
     const num=(v)=>v>0?`<span style="font-weight:700;color:var(--accent)">${v}</span>`:`<span style="color:var(--text-light)">0</span>`;
+    const numClick=(v,type)=>v>0?`<span class="cell-link" title="Click to see the ${v} row${v!==1?'s':''} behind this number" onclick="openCalcAllDrilldown('${t.id.replace(/'/g,"\\'")}','${type}')" style="font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${v}</span>`:`<span style="color:var(--text-light)">0</span>`;
     const projList = (t.projects||[]).join(', ');
     return `<tr>
       <td style="text-align:center;padding:4px 8px;"><button class="eye-btn" title="View per-project breakdown" onclick="openCalcAllProjectBreakdown('${t.id.replace(/'/g,"\\'")}')">👁</button></td>
@@ -3586,12 +3594,12 @@ function renderCalcAllTable(data){
       <td style="background:${bg};font-weight:600;color:var(--text)">${t.team}</td>
       <td style="text-align:center;background:${bg};font-size:0.68rem;color:var(--text);font-weight:600">${t.teamNum}</td>
       <td ${ns}>${num(t.initial)}</td>
-      <td ${ns}>${num(t.i3qa)}</td>
+      <td ${ns}>${numClick(t.i3qa,'i3qa')}</td>
       <td ${ns}>${num(t.rv)}</td>
       <td ${ns}>${num(t.fix)}</td>
-      <td ${ns}>${num(t.missed)}</td>
-      <td ${ns}>${num(t.refix)}</td>
-      <td ${ns}>${num(t.warn)}</td>
+      <td ${ns}>${numClick(t.missed,'missed')}</td>
+      <td ${ns}>${numClick(t.refix,'refix')}</td>
+      <td ${ns}>${numClick(t.warn,'warn')}</td>
       <td class="cell-points">${t.points.toFixed(4)}</td>
       <td class="cell-qp" style="color:${qpColor};font-weight:700">${t.qp.toFixed(2)}%</td>
       <td class="cell-num" style="color:${t.thresholdApplied?'var(--green)':'var(--accent)'};font-weight:${t.thresholdApplied?'700':'400'}">${t.qualityPctMod}%${t.thresholdApplied?'<span style="font-size:0.6rem;background:var(--green);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;">★</span>':''}</td>
@@ -3732,6 +3740,65 @@ function openCalcAllProjectBreakdown(techId) {
   </tr>`;
 
   document.getElementById('ca-proj-modal').classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALC-ALL ROW-LEVEL DRILLDOWN MODAL
+// Click the # I3QA / # I3 Missed/Rework / # Refix / # Warn number
+// for a tech to see exactly which rows (across all projects) make up
+// that count.
+// ═══════════════════════════════════════════════════════════════
+const CALC_DRILL_META = {
+  i3qa:    { icon:'🔍', label:'i3QA',                title:'i3QA Task Rows',
+             desc:'Rows where this tech performed the i3QA review task.' },
+  missed:  { icon:'⚠️', label:'I3 Missed/Rework',    title:'I3 Missed / Rework Rows',
+             desc:'Rows where this tech\u2019s initial tagging was flagged as a miss by i3QA.' },
+  refix:   { icon:'🔁', label:'Refix',                title:'Refix Rows',
+             desc:'Rows where this tech\u2019s original fix was sent back for a refix (points transferred to the refix tech).' },
+  warn:    { icon:'🚩', label:'Warn',                 title:'Warning Rows',
+             desc:'Rows where a warning label was triggered against this tech\u2019s fix.' },
+};
+
+// Case-tolerant raw-row field getter (raw rows are plain objects keyed by
+// uppercase DBF/CSV field names, but be defensive either way).
+function rg(row, col){
+  if(!row) return '';
+  const v = row[col] !== undefined ? row[col] : row[col.toUpperCase()];
+  return (v===undefined||v===null) ? '' : String(v).trim();
+}
+
+function openCalcAllDrilldown(techId, type){
+  const tech = calcAllData.find(t => t.id === techId);
+  if (!tech) { toast('Tech not found in calc-all data'); return; }
+  const meta = CALC_DRILL_META[type];
+  if (!meta) return;
+  const srcKey = 'src' + type.charAt(0).toUpperCase() + type.slice(1);
+  const entries = tech[srcKey] || [];
+
+  document.getElementById('cad-title').textContent = `${meta.icon} ${meta.title} — ${tech.name||techId} (${techId})`;
+  document.getElementById('cad-subtitle').innerHTML =
+    `${meta.desc}<br>${entries.length} row${entries.length!==1?'s':''} across ${new Set(entries.map(e=>e.project)).size} project${new Set(entries.map(e=>e.project)).size!==1?'s':''}`;
+
+  document.getElementById('cad-body').innerHTML = entries.length ? entries.map((e,i)=>{
+    const r = e.row;
+    const fixed1 = rg(r,'FIXED1?') || rg(r,'FIXED1');
+    const afp1   = rg(r,'AFP1_STAT');
+    return `<tr style="background:${i%2===0?'var(--surface)':'var(--surface2)'}">
+      <td><span style="font-size:0.72rem;font-weight:600;color:var(--text)">${e.project}</span></td>
+      <td><span class="cell-mono" style="font-size:0.72rem;" title="${rg(r,'UID')}">${rg(r,'UID')||'—'}</span></td>
+      <td style="text-align:center;">${rg(r,'CATEGORY')||'—'}</td>
+      <td style="text-align:center;">${rg(r,'I3QA_CAT')||'—'}</td>
+      <td class="cell-mono" style="font-size:0.72rem;">${rg(r,'QC_ID')||'—'}</td>
+      <td class="cell-mono" style="font-size:0.72rem;">${rg(r,'I3QA_ID')||'—'}</td>
+      <td>${rg(r,'I3QA_LABEL')||'—'}</td>
+      <td class="cell-mono" style="font-size:0.72rem;">${rg(r,'FIX1_ID')||'—'}</td>
+      <td>${rg(r,'RV1_LABEL')||'—'}</td>
+      <td style="text-align:center;font-weight:${fixed1==='N'?'700':'400'};color:${fixed1==='N'?'var(--red)':'var(--text)'}">${fixed1||'—'}</td>
+      <td style="text-align:center;font-weight:${afp1==='AA'?'700':'400'};color:${afp1==='AA'?'var(--red)':'var(--text)'}">${afp1||'—'}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text-muted);">No rows found.</td></tr>`;
+
+  document.getElementById('ca-drill-modal').classList.add('show');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -5218,6 +5285,44 @@ openDB().then(refreshProjectList).catch(console.error);
     </div>
     <div class="modal-footer" style="flex-shrink:0;">
       <button class="btn btn-ghost" onclick="closeModal('ca-proj-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CALC-ALL ROW-LEVEL DRILLDOWN MODAL ══════════════ -->
+<div class="modal-backdrop" id="ca-drill-modal" onclick="if(event.target===this)closeModal('ca-drill-modal')">
+  <div class="modal" style="max-width:1000px;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <h3 id="cad-title">🔍 Row Breakdown</h3>
+        <div id="cad-subtitle" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;line-height:1.5;"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('ca-drill-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="flex:1;overflow-y:auto;padding:16px 24px;">
+      <div style="overflow-x:auto;">
+        <table class="qb-table ca-result-table" id="cad-table" style="font-size:0.76rem;width:100%;">
+          <thead>
+            <tr>
+              <th style="min-width:140px;">Project</th>
+              <th>UID</th>
+              <th style="text-align:center;">Cat</th>
+              <th style="text-align:center;">i3QA Cat</th>
+              <th>QC Tech</th>
+              <th>i3QA Tech</th>
+              <th>i3QA Label</th>
+              <th>Fix1 Tech</th>
+              <th>RV1 Label</th>
+              <th style="text-align:center;">Fixed1?</th>
+              <th style="text-align:center;">AFP1 Stat</th>
+            </tr>
+          </thead>
+          <tbody id="cad-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="closeModal('ca-drill-modal')">Close</button>
     </div>
   </div>
 </div>
