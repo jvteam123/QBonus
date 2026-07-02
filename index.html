@@ -80,22 +80,32 @@
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 .app-shell{display:flex;flex-direction:column;height:100vh;}
 /* TOPBAR */
-.topbar{background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;flex-shrink:0;box-shadow:var(--shadow-topbar);position:relative;z-index:20;}
+.topbar{background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;flex-shrink:0;box-shadow:var(--shadow-topbar);position:relative;z-index:20;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;}
+.topbar::-webkit-scrollbar{height:4px;}
+.topbar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:4px;}
 .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(14,165,233,0.4),transparent);}
-.topbar-logo{display:flex;align-items:center;gap:10px;}
+.topbar-logo{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .topbar-logo .icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 12px var(--accent-glow),0 2px 6px rgba(0,0,0,0.3);}
 .topbar-logo h1{color:#fff;font-size:1rem;font-weight:700;letter-spacing:-0.02em;}
 .topbar-logo span{color:rgba(255,255,255,0.35);font-size:0.72rem;margin-left:4px;font-weight:400;}
-.topbar-spacer{flex:1;}
-.topbar-actions{display:flex;gap:8px;align-items:center;}
+.topbar-spacer{flex:1;min-width:16px;}
+.topbar-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.topbar-version{flex-shrink:0;}
+@media (max-width:1180px){
+  .topbar-logo span{display:none;} /* hide "VIEWER · PHILI" subtitle first */
+  .topbar-version{display:none;} /* then the v9.0 badge */
+  .topbar{padding:0 14px;gap:10px;}
+  .topbar-actions{gap:6px;}
+  .btn-settings,.btn-loadfull,.btn.btn-primary,.btn.btn-ghost{padding:7px 10px;}
+}
 /* project badge in topbar */
-#project-badge{display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border-radius:8px;padding:4px 12px;}
+#project-badge{display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border-radius:8px;padding:4px 12px;flex-shrink:1;min-width:0;}
 #project-badge .pb-site{font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--accent);color:#fff;}
 #project-badge .pb-gsd{font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#10b981;color:#fff;}
 #project-badge .pb-type{font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:4px;}
 #project-badge .pb-type.ir{background:#f59e0b;color:#fff;}
 #project-badge .pb-type.non{background:#6b7a8d;color:#fff;}
-#project-badge .pb-name{font-size:0.78rem;color:rgba(255,255,255,0.7);font-weight:500;}
+#project-badge .pb-name{font-size:0.78rem;color:rgba(255,255,255,0.7);font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* SIDEBAR */
 .layout{display:flex;flex:1;overflow:hidden;}
 .sidebar{width:224px;flex-shrink:0;background:var(--navy2);display:flex;flex-direction:column;overflow:hidden;border-right:1px solid rgba(255,255,255,0.04);box-shadow:2px 0 8px rgba(0,0,0,0.15);}
@@ -302,7 +312,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <div class="icon">📍</div>
       <h1>IC Fixpoints <span style="font-weight:400;color:rgba(255,255,255,0.45);font-size:0.72rem;margin-left:2px;letter-spacing:0.02em;">VIEWER · PHILI</span></h1>
     </div>
-    <span style="font-size:0.62rem;font-weight:700;color:rgba(14,165,233,0.7);background:rgba(14,165,233,0.1);padding:2px 7px;border-radius:4px;border:1px solid rgba(14,165,233,0.2);letter-spacing:0.06em;">v9.0</span>
+    <span class="topbar-version" style="font-size:0.62rem;font-weight:700;color:rgba(14,165,233,0.7);background:rgba(14,165,233,0.1);padding:2px 7px;border-radius:4px;border:1px solid rgba(14,165,233,0.2);letter-spacing:0.06em;">v9.0</span>
     <div id="project-badge">
       <span class="pb-site" id="pb-site">—</span>
       <span class="pb-gsd" id="pb-gsd">6in</span>
@@ -3306,7 +3316,20 @@ async function loadProject(name){
 
 async function deleteProject(name){
   if(!confirm(`Delete "${name}"?`))return;
-  await dbDelete(name);toast(`Deleted "${name}"`);await refreshProjectList();
+  await dbDelete(name);
+  toast(`Deleted "${name}"`);
+  // If the project on screen right now is the one just deleted, its data is
+  // now orphaned (still showing in the table, but gone from storage) — reset
+  // back to the empty state instead of leaving stale data displayed.
+  if(currentProjectName===name){
+    currentProjectName=null;
+    allRows=[];filtered=[];techRows=[];filteredTech=[];currentRawRecords=[];
+    document.getElementById('btn-save-project').style.display='none';
+    document.getElementById('project-badge').style.display='none';
+    if(currentView!=='calcall') switchView(currentView);
+  }
+  if(calcAllProjectFilter===name) clearCalcAllProjectFilter();
+  await refreshProjectList();
 }
 
 async function deleteAllProjects(){
