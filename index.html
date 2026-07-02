@@ -159,6 +159,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .btn-danger:hover{background:var(--red-bg);}
 .btn-settings{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.12);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
 .btn-settings:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(14,165,233,0.4);}
+/* "Load Full Data" — topbar, next to Import File */
+.btn-loadfull{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 1px 4px rgba(16,185,129,0.35),0 0 0 1px rgba(16,185,129,0.25);}
+.btn-loadfull:hover{background:linear-gradient(135deg,#34d399,#10b981);box-shadow:0 2px 10px rgba(16,185,129,0.5);}
+.btn-loadfull svg{flex-shrink:0;}
+/* "Delete All Projects" — below sidebar project list */
+.btn-delete-all{width:100%;justify-content:center;background:transparent;color:rgba(248,113,113,0.75);border:1px dashed rgba(248,113,113,0.35);padding:7px 8px;font-size:0.72rem;}
+.btn-delete-all:hover{background:rgba(248,113,113,0.1);color:#f87171;border-color:rgba(248,113,113,0.6);border-style:solid;}
 /* STATS BAR */
 .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0;}
 .stat-cell{background:var(--surface);padding:11px 16px 10px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
@@ -309,6 +316,10 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <button class="btn btn-ghost" onclick="openSaveModal()" id="btn-save-project" style="display:none">💾 Save Project</button>
       <button class="btn btn-primary" onclick="triggerFileInput()">⬆ Import File</button>
       <input type="file" id="file-input-hidden" accept=".zip,.dbf,.csv" multiple style="display:none" />
+      <button class="btn btn-loadfull" onclick="document.getElementById('ca-full-data-input').click()" title="Load a .json file previously saved with 'Save Full Data' (Calc All view) — restores the full calculation, including per-project breakdowns and drill-down, without re-running Calculate All.">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Load Full Data</button>
+      <input type="file" id="ca-full-data-input" accept=".json" style="display:none" onchange="importCalcAllFullData(this)" />
     </div>
   </div>
 
@@ -344,6 +355,9 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
         <div style="padding:8px 16px;font-size:0.72rem;color:rgba(255,255,255,0.25);">No saved projects yet</div>
       </div>
       <div class="project-list-hint" id="project-list-hint">All projects included in calculation above</div>
+      <div style="padding:6px 10px 10px;">
+        <button class="btn btn-delete-all" onclick="deleteAllProjects()" title="Permanently delete every saved project from this browser">🗑 Delete All Projects</button>
+      </div>
     </div>
 
     <!-- MAIN -->
@@ -542,10 +556,6 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <button class="btn btn-ghost" onclick="exportCalcAllFullData()" style="gap:6px;" title="Downloads EVERYTHING behind this calculation — every project's raw rows, per-project breakdowns, and DR/DRQ triggers — as a .json file. Load it back later with 'Load Full Data' and every number, per-project breakdown, and drill-down modal will work exactly as it does right now, with no need to re-run Calculate All.">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Save Full Data</button>
-            <button class="btn btn-ghost" onclick="document.getElementById('ca-full-data-input').click()" style="gap:6px;" title="Load a .json file previously saved with 'Save Full Data' — restores the full calculation, including drill-down, without re-running Calculate All.">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Load Full Data</button>
-            <input type="file" id="ca-full-data-input" accept=".json" style="display:none" onchange="importCalcAllFullData(this)" />
           </div>
           <!-- Calc All Project Filter Banner (shown when viewing one loaded project individually) -->
           <div id="ca-project-filter-banner" style="display:none;align-items:center;gap:8px;padding:7px 16px;background:var(--blue-light);border-bottom:1px solid var(--border);flex-shrink:0;font-size:0.78rem;">
@@ -2526,7 +2536,8 @@ function changePageSize(){PAGE_SIZE=+document.getElementById('rows-per-page').va
 // ═══════════════════════════════════════════════════════════════
 // VIEWS
 // ═══════════════════════════════════════════════════════════════
-function switchView(v){
+function switchView(v,opts){
+  opts=opts||{};
   currentView=v;
   document.getElementById('nav-tasks').classList.toggle('active',v==='tasks');
   document.getElementById('nav-tech').classList.toggle('active',v==='tech');
@@ -2555,7 +2566,13 @@ function switchView(v){
   document.getElementById('project-list').classList.toggle('calcall-mode', v==='calcall');
   document.getElementById('project-list-hint').classList.toggle('show', v==='calcall');
   if(v==='tech'){buildTeamChips();recalcBonus();}
-  if(v==='calcall'){initCalcAllView();}
+  // Skip the auto Calculate-All recompute when we're navigating in specifically
+  // to view one "Load Full Data" project (see viewCalcAllProject) — that
+  // recompute only covers raw-row saved projects and would otherwise silently
+  // discard the loaded full-data snapshot and reset the project filter we
+  // just set, which is why Fixpoint Tasks/Tech Summary → a "(loaded)" project
+  // appeared broken.
+  if(v==='calcall' && !opts.skipRecalc){initCalcAllView();}
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3292,6 +3309,29 @@ async function deleteProject(name){
   await dbDelete(name);toast(`Deleted "${name}"`);await refreshProjectList();
 }
 
+async function deleteAllProjects(){
+  const projects = await dbGetAll();
+  if(!projects || !projects.length){ toast('No saved projects to delete'); return; }
+  if(!confirm(`Delete ALL ${projects.length} saved project${projects.length!==1?'s':''}? This cannot be undone.`)) return;
+  showLoading('Deleting all projects…');
+  try{
+    for(const p of projects){ await dbDelete(p.name); }
+    // Reset all in-memory state so the app doesn't keep showing data for
+    // projects that no longer exist in storage.
+    currentProjectName = null;
+    allRows = []; filtered = []; techRows = []; filteredTech = [];
+    currentRawRecords = [];
+    calcAllData = []; calcAllFiltered = []; calcAllProjectFilter = ''; calcAllFromFullData = false;
+    document.getElementById('btn-save-project').style.display = 'none';
+    updateProjectBadge();
+    await refreshProjectList();
+    if(currentView==='calcall'){ updateCalcAllStatsAndRender(); }
+    else { switchView(currentView); }
+    toast(`✓ Deleted all ${projects.length} project${projects.length!==1?'s':''}`);
+  } catch(e){ console.error(e); toast('Error deleting projects: '+e.message); }
+  hideLoading();
+}
+
 async function refreshProjectList(){
   const list=document.getElementById('project-list');
   list.innerHTML=''; // always clear first before re-rendering
@@ -3645,8 +3685,18 @@ function getCalcAllProjectScopedData(projectName){
 
 function viewCalcAllProject(name){
   calcAllProjectFilter = name;
-  if(currentView!=='calcall'){ switchView('calcall'); }
+  if(currentView!=='calcall'){
+    // skipRecalc: jumping here from Fixpoint Tasks / Tech Summary must NOT
+    // trigger a fresh Calculate All — that only recomputes from raw-row
+    // saved projects, so it would wipe out any "Load Full Data" snapshot
+    // and reset calcAllProjectFilter right after we just set it above.
+    switchView('calcall', {skipRecalc:true});
+  }
   document.querySelectorAll('.project-item').forEach(el=>el.classList.toggle('active', el.dataset.name===name));
+  buildCalcAllTeamChips();
+  if(!calcAllData.some(t=>(t.projects||[]).includes(name))){
+    toast(`📄 "${name}" isn't loaded into this session yet — use "Load Full Data" (top bar) to load its saved snapshot.`);
+  }
   applyCalcAllFilter();
 }
 
