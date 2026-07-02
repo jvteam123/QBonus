@@ -4087,9 +4087,11 @@ function openDrillDown(techId, stat) {
                 <div style="display:flex;flex-direction:column;gap:3px;">
                   <div style="display:flex;align-items:center;gap:6px;">
                     <span style="color:var(--text-muted);font-size:0.74rem;min-width:80px;">i3QA Penalty:</span>
-                    ${drqBadge || '<span style="color:var(--green);font-size:0.74rem;">None</span>'}
-                    ${drqRule ? `<span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${drqRule.deduct} pts</span>` : ''}
-                    ${!drqRule && drqFixedExcluded > 0 ? `<span style="color:var(--green);font-size:0.7rem;">None — ${drqFixedExcluded} row${drqFixedExcluded!==1?'s':''} excluded (fixed)</span>` : ''}
+                    ${drqRule
+                      ? `${drqBadge}<span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${drqRule.deduct} pts</span>`
+                      : drqFixedExcluded > 0
+                        ? `<span style="color:var(--green);font-size:0.74rem;">None — ${drqFixedExcluded} row${drqFixedExcluded!==1?'s':''} excluded (fixed)</span>`
+                        : `<span style="color:var(--green);font-size:0.74rem;">None</span>`}
                   </div>
                   ${drqRule ? `<div style="margin-left:86px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:0.67rem;background:#78350f;color:#fcd34d;border-radius:3px;padding:2px 7px;font-weight:700;letter-spacing:0.04em;">⚠ DEDUCTED FROM i3QA TECH</span><span style="font-size:0.67rem;color:var(--text-muted);margin-top:1px;">Based on ${drqECount} egregious rows (FIXED1=N or AFP1=AA)</span></div>` : ''}
                 </div>
@@ -4173,8 +4175,11 @@ function openDrillDown(techId, stat) {
               <div style="display:flex;flex-direction:column;gap:3px;">
                 <div style="display:flex;align-items:center;gap:6px;">
                   <span style="color:var(--text-muted);font-size:0.74rem;min-width:80px;">i3QA Penalty:</span>
-                  ${drqBadge || '<span style="color:var(--green);font-size:0.74rem;">None</span>'}
-                  ${drqRule ? `<span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${drqRule.deduct} pts</span>` : ''}
+                  ${drqRule
+                    ? `${drqBadge}<span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--red);">${drqRule.deduct} pts</span>`
+                    : drqFixedExcluded > 0
+                      ? `<span style="color:var(--green);font-size:0.74rem;">None — ${drqFixedExcluded} row${drqFixedExcluded!==1?'s':''} excluded (fixed)</span>`
+                      : `<span style="color:var(--green);font-size:0.74rem;">None</span>`}
                 </div>
                 ${drqRule
                   ? `<div style="margin-left:86px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:0.67rem;background:#78350f;color:#fcd34d;border-radius:3px;padding:2px 7px;font-weight:700;letter-spacing:0.04em;">⚠ DEDUCTED FROM i3QA TECH</span><span style="font-size:0.67rem;color:var(--text-muted);margin-top:1px;">Based on ${drqECount} egregious rows (FIXED1=N or AFP1=AA)</span></div>`
