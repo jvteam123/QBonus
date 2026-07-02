@@ -3234,6 +3234,11 @@ async function loadProject(name){
   showLoading('Loading…');
   const proj=await dbGet(name);
   if(!proj){hideLoading();toast('Project not found');return;}
+  if(proj.fromFullData){
+    hideLoading();
+    toast('📄 This project was loaded from a Calculate-All full-data file — it has no raw rows to open individually, but it\'s already included in the Calculate All totals.');
+    return;
+  }
   if(proj.importSettings)importSettings={...proj.importSettings};
   currentProjectName=proj.name;
 
@@ -3291,9 +3296,9 @@ async function refreshProjectList(){
   projects.forEach(p=>{ if(!keepNames.has(p.name)) dbDelete(p.name).catch(()=>{}); });
   projects=[...seen.values()].sort((a,b)=>b.createdAt-a.createdAt);
   list.innerHTML=projects.map(p=>`
-    <div class="project-item${p.name===currentProjectName?' active':''}" data-name="${p.name}" onclick="loadProject('${p.name.replace(/'/g,"\\'")}')">
-      <span style="font-size:12px">📁</span>
-      <span class="pi-name" title="${p.name}">${p.name}</span>
+    <div class="project-item${p.name===currentProjectName?' active':''}" data-name="${p.name}" title="${p.fromFullData ? 'Loaded from a Calculate-All full-data file — no raw rows, so it can\'t be reopened here, but it\'s included in Calculate All totals and the recalculated Multiplier.' : p.name}" onclick="loadProject('${p.name.replace(/'/g,"\\'")}')">
+      <span style="font-size:12px">${p.fromFullData ? '📄' : '📁'}</span>
+      <span class="pi-name" title="${p.name}">${p.name}${p.fromFullData ? ' <span style=\"opacity:.55;font-weight:400;\">(loaded)</span>' : ''}</span>
       <span class="pi-count">${(p.rowCount||'?').toLocaleString()}</span>
       <span class="pi-del" onclick="event.stopPropagation();deleteProject('${p.name.replace(/'/g,"\\'")}')">✕</span>
     </div>`).join('');
@@ -3397,14 +3402,19 @@ let calcAllFiltered = [];    // after search+team filter
 let calcAllSortKey = 'points';
 let calcAllSortDir = -1;
 let calcAllTeamFilter = '';
+let calcAllFromFullData = false; // true when calcAllData came from "Load Full Data" (no raw rows behind it)
 
 async function initCalcAllView(){
   try {
     const projects = await dbGetAll();
+    const realCount = projects.filter(p=>!p.fromFullData).length;
     const el = document.getElementById('ca-project-count');
     if(el) el.textContent = `${projects.length} project${projects.length!==1?'s':''} in storage`;
-    // Always re-run calc when entering the view if there are saved projects
-    if(projects.length){
+    // Only auto re-run a fresh calculation if there are real (raw-row) saved
+    // projects. Placeholder entries created by "Load Full Data" have no raw
+    // rows, so running a fresh Calculate All against them would just skip
+    // them and could wipe out a calc-all view that was restored from a file.
+    if(realCount){
       await runCalcAll();
     }
   } catch(e){ console.warn('initCalcAllView error', e); }
@@ -3415,8 +3425,25 @@ async function runCalcAll(){
   // Update the multiplier label in the header
   const multLabel = document.getElementById('ca-mult-label');
   if (multLabel) multLabel.textContent = mult.toFixed(2);
-  const projects = await dbGetAll();
-  if(!projects.length){ toast('No saved projects found'); return; }
+  const allStored = await dbGetAll();
+  // "fromFullData" entries are lightweight placeholders created by "Load Full
+  // Data" so the project shows up in the sidebar — they have no raw rows, so
+  // they can't be fed through buildTechStats() below.
+  const projects = allStored.filter(p=>!p.fromFullData);
+
+  if(!projects.length){
+    // Nothing with raw rows to recompute from. If we currently have data
+    // that was restored via "Load Full Data", just re-apply the new
+    // multiplier to it in place instead of failing.
+    if(calcAllFromFullData && calcAllData.length){
+      recalcCalcAllMultiplier(mult);
+      return;
+    }
+    toast('No saved projects found'); return;
+  }
+
+  // A fresh calculation from raw rows supersedes any "Load Full Data" snapshot.
+  calcAllFromFullData = false;
 
   const progWrap = document.getElementById('ca-progress-wrap');
   const progLabel = document.getElementById('ca-progress-label');
@@ -3524,22 +3551,53 @@ async function runCalcAll(){
     return c;
   });
 
-  // Update stats bar
-  const allProjects = [...new Set(calcAllData.flatMap(t=>t.projects))];
+  updateCalcAllStatsAndRender();
+}
+
+// Shared by runCalcAll(), importCalcAllFullData(), and recalcCalcAllMultiplier()
+// so the stats bar / team chips / table always refresh the same way regardless
+// of where calcAllData came from.
+function updateCalcAllStatsAndRender(){
+  const allProjects = [...new Set(calcAllData.flatMap(t=>t.projects||[]))];
   document.getElementById('cas-techs').textContent = calcAllData.length;
-  document.getElementById('cas-points').textContent = calcAllData.reduce((s,t)=>s+t.points,0).toFixed(2);
-  document.getElementById('cas-initial').textContent = calcAllData.reduce((s,t)=>s+t.initial,0);
-  document.getElementById('cas-i3qa').textContent = calcAllData.reduce((s,t)=>s+t.i3qa,0);
-  document.getElementById('cas-rv').textContent = calcAllData.reduce((s,t)=>s+t.rv,0);
-  document.getElementById('cas-fix').textContent = calcAllData.reduce((s,t)=>s+t.fix,0);
-  document.getElementById('cas-missed').textContent = calcAllData.reduce((s,t)=>s+t.missed,0);
-  document.getElementById('cas-refix').textContent = calcAllData.reduce((s,t)=>s+t.refix,0);
-  document.getElementById('cas-bonus').textContent = calcAllData.reduce((s,t)=>s+t.totalBonus,0).toFixed(4);
+  document.getElementById('cas-points').textContent = calcAllData.reduce((s,t)=>s+(t.points||0),0).toFixed(2);
+  document.getElementById('cas-initial').textContent = calcAllData.reduce((s,t)=>s+(t.initial||0),0);
+  document.getElementById('cas-i3qa').textContent = calcAllData.reduce((s,t)=>s+(t.i3qa||0),0);
+  document.getElementById('cas-rv').textContent = calcAllData.reduce((s,t)=>s+(t.rv||0),0);
+  document.getElementById('cas-fix').textContent = calcAllData.reduce((s,t)=>s+(t.fix||0),0);
+  document.getElementById('cas-missed').textContent = calcAllData.reduce((s,t)=>s+(t.missed||0),0);
+  document.getElementById('cas-refix').textContent = calcAllData.reduce((s,t)=>s+(t.refix||0),0);
+  document.getElementById('cas-bonus').textContent = calcAllData.reduce((s,t)=>s+(t.totalBonus||0),0).toFixed(4);
   document.getElementById('cas-projects').textContent = allProjects.length;
   document.getElementById('ca-stats-bar').style.display = '';
 
   buildCalcAllTeamChips();
   applyCalcAllFilter();
+}
+
+// Re-applies a new PHP Multiplier to whatever is currently in calcAllData
+// without needing raw rows. This works because every tech's per-project
+// breakdown already stores points + Fix Quality % (qp) + the resulting
+// Quality % Mod / threshold bonus — the multiplier is just the last factor
+// in Payout = Points × Multiplier × (Bonus% ÷ 100), so it can be re-applied
+// on top of numbers that were restored via "Load Full Data".
+function recalcCalcAllMultiplier(mult){
+  if(!calcAllData.length){ toast('Nothing to recalculate — load or calculate data first'); return; }
+  calcAllData.forEach(t=>{
+    t.bonusMult = mult;
+    // baseBonus (Payout w/o Mult) never changes with the multiplier — only
+    // totalBonus (Payout w/ Mult) does. totalBonus = baseBonus × mult, which
+    // is algebraically identical to the original Points × Mult × Bonus%
+    // formula since baseBonus = Points × Bonus%.
+    (t.projectBreakdown||[]).forEach(p=>{
+      p.mult = mult;
+      p.totalBonus = (p.baseBonus||0) * mult;
+    });
+    t.baseBonus = (t.projectBreakdown||[]).reduce((s,p)=>s+(p.baseBonus||0),0);
+    t.totalBonus = (t.projectBreakdown||[]).reduce((s,p)=>s+(p.totalBonus||0),0);
+  });
+  updateCalcAllStatsAndRender();
+  toast(`✓ Recalculated ${calcAllData.length} techs with multiplier ${mult.toFixed(2)}`);
 }
 
 function applyCalcAllFilter(){
@@ -3715,25 +3773,36 @@ async function importCalcAllFullData(input){
       return;
     }
     calcAllData = data;
+    calcAllFromFullData = true;
     if(payload.multiplier) document.getElementById('ca-mult').value = Number(payload.multiplier).toFixed(2);
 
     const allProjects = [...new Set(calcAllData.flatMap(t=>t.projects||[]))];
-    document.getElementById('cas-techs').textContent = calcAllData.length;
-    document.getElementById('cas-points').textContent = calcAllData.reduce((s,t)=>s+(t.points||0),0).toFixed(2);
-    document.getElementById('cas-initial').textContent = calcAllData.reduce((s,t)=>s+(t.initial||0),0);
-    document.getElementById('cas-i3qa').textContent = calcAllData.reduce((s,t)=>s+(t.i3qa||0),0);
-    document.getElementById('cas-rv').textContent = calcAllData.reduce((s,t)=>s+(t.rv||0),0);
-    document.getElementById('cas-fix').textContent = calcAllData.reduce((s,t)=>s+(t.fix||0),0);
-    document.getElementById('cas-missed').textContent = calcAllData.reduce((s,t)=>s+(t.missed||0),0);
-    document.getElementById('cas-refix').textContent = calcAllData.reduce((s,t)=>s+(t.refix||0),0);
-    document.getElementById('cas-bonus').textContent = calcAllData.reduce((s,t)=>s+(t.totalBonus||0),0).toFixed(4);
-    document.getElementById('cas-projects').textContent = allProjects.length;
-    document.getElementById('ca-stats-bar').style.display = '';
 
-    buildCalcAllTeamChips();
-    applyCalcAllFilter();
+    // Add each project behind this file into the Saved Projects sidebar (as
+    // lightweight placeholders — there are no raw rows in a full-data
+    // export, only the aggregated per-project breakdown) so it's visible
+    // which projects the loaded numbers cover, and so ca-project-count /
+    // "Saved Projects" stay consistent with what's on screen.
+    try{
+      const existing = await dbGetAll();
+      const existingNames = new Set(existing.map(p=>p.name));
+      for(const pname of allProjects){
+        if(existingNames.has(pname)) continue; // don't clobber a real saved project with the same name
+        const rowCount = calcAllData.reduce((s,t)=>s+((t.projects||[]).includes(pname) ? 1 : 0),0);
+        await dbSave({
+          name: pname, createdAt: Date.now(), rowCount,
+          fromFullData: true, sourceFile: file.name
+        });
+      }
+      await refreshProjectList();
+    } catch(e){ console.warn('Could not add loaded projects to Saved Projects list', e); }
+
+    const el = document.getElementById('ca-project-count');
+    if(el) el.textContent = `${allProjects.length} project${allProjects.length!==1?'s':''} in storage (loaded from file)`;
+
+    updateCalcAllStatsAndRender();
     hideLoading();
-    toast(`✓ Loaded full data — ${calcAllData.length} techs across ${allProjects.length} projects (drill-down restored)`);
+    toast(`✓ Loaded full data — ${calcAllData.length} techs across ${allProjects.length} projects. Adjust the Multiplier and click Calculate All to recalculate.`);
   } catch(ex){
     hideLoading();
     toast('❌ Failed to load file: ' + ex.message);
