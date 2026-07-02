@@ -119,6 +119,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .project-list.calcall-mode .project-item{opacity:0.35;cursor:not-allowed;pointer-events:none;}
 .project-list.calcall-mode .project-item .pi-del{pointer-events:all;opacity:0;}
 .project-list.calcall-mode .project-item:hover{background:none;color:rgba(255,255,255,0.5);}
+/* "Loaded from full data" placeholder projects stay clickable even in Calc
+   All mode, since they can be viewed individually (project-scoped) there. */
+.project-list.calcall-mode .project-item.from-full-data{opacity:0.85;cursor:pointer;pointer-events:all;}
+.project-list.calcall-mode .project-item.from-full-data:hover{background:rgba(14,165,233,0.07);color:rgba(255,255,255,0.9);}
+.project-list.calcall-mode .project-item.from-full-data.active{opacity:1;background:rgba(14,165,233,0.15);color:#fff;border-left-color:rgba(14,165,233,0.6);}
+.project-list.calcall-mode .project-item.from-full-data .pi-del{opacity:0;}
+.project-list.calcall-mode .project-item.from-full-data:hover .pi-del{opacity:1;}
 .project-list-hint{display:none;padding:5px 14px 8px;font-size:0.65rem;color:rgba(255,255,255,0.3);font-style:italic;line-height:1.4;}
 .project-list.calcall-mode ~ .project-list-hint,.project-list-hint.show{display:block;}
 /* MAIN */
@@ -539,6 +546,11 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Load Full Data</button>
             <input type="file" id="ca-full-data-input" accept=".json" style="display:none" onchange="importCalcAllFullData(this)" />
+          </div>
+          <!-- Calc All Project Filter Banner (shown when viewing one loaded project individually) -->
+          <div id="ca-project-filter-banner" style="display:none;align-items:center;gap:8px;padding:7px 16px;background:var(--blue-light);border-bottom:1px solid var(--border);flex-shrink:0;font-size:0.78rem;">
+            <span>📄 Viewing project <b id="ca-project-filter-name" style="color:var(--accent);"></b> individually — numbers below are for this project only.</span>
+            <button class="btn btn-ghost" style="padding:3px 10px;font-size:0.72rem;margin-left:auto;" onclick="clearCalcAllProjectFilter()">✕ Clear, show all projects</button>
           </div>
           <!-- Calc All Team Filter -->
           <div id="ca-team-filter-bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;">
@@ -3296,7 +3308,7 @@ async function refreshProjectList(){
   projects.forEach(p=>{ if(!keepNames.has(p.name)) dbDelete(p.name).catch(()=>{}); });
   projects=[...seen.values()].sort((a,b)=>b.createdAt-a.createdAt);
   list.innerHTML=projects.map(p=>`
-    <div class="project-item${p.name===currentProjectName?' active':''}" data-name="${p.name}" title="${p.fromFullData ? 'Loaded from a Calculate-All full-data file — no raw rows, so it can\'t be reopened here, but it\'s included in Calculate All totals and the recalculated Multiplier.' : p.name}" onclick="loadProject('${p.name.replace(/'/g,"\\'")}')">
+    <div class="project-item${p.fromFullData?' from-full-data':''}${(p.fromFullData ? p.name===calcAllProjectFilter : p.name===currentProjectName) ? ' active':''}" data-name="${p.name}" title="${p.fromFullData ? 'Loaded from a Calculate-All full-data file — click to view this project on its own. No raw rows, so row-level drill-down is limited to what the file captured.' : p.name}" onclick="${p.fromFullData ? `viewCalcAllProject('${p.name.replace(/'/g,"\\'")}')` : `loadProject('${p.name.replace(/'/g,"\\'")}')`}">
       <span style="font-size:12px">${p.fromFullData ? '📄' : '📁'}</span>
       <span class="pi-name" title="${p.name}">${p.name}${p.fromFullData ? ' <span style=\"opacity:.55;font-weight:400;\">(loaded)</span>' : ''}</span>
       <span class="pi-count">${(p.rowCount||'?').toLocaleString()}</span>
@@ -3402,6 +3414,7 @@ let calcAllFiltered = [];    // after search+team filter
 let calcAllSortKey = 'points';
 let calcAllSortDir = -1;
 let calcAllTeamFilter = '';
+let calcAllProjectFilter = ''; // set by clicking a "loaded from full data" project in the sidebar
 let calcAllFromFullData = false; // true when calcAllData came from "Load Full Data" (no raw rows behind it)
 
 async function initCalcAllView(){
@@ -3444,6 +3457,7 @@ async function runCalcAll(){
 
   // A fresh calculation from raw rows supersedes any "Load Full Data" snapshot.
   calcAllFromFullData = false;
+  calcAllProjectFilter = '';
 
   const progWrap = document.getElementById('ca-progress-wrap');
   const progLabel = document.getElementById('ca-progress-label');
@@ -3600,9 +3614,58 @@ function recalcCalcAllMultiplier(mult){
   toast(`✓ Recalculated ${calcAllData.length} techs with multiplier ${mult.toFixed(2)}`);
 }
 
+// When calcAllProjectFilter is set, returns one row per tech reshaped to
+// that single project's numbers (pulled from projectBreakdown), instead of
+// the tech's combined totals across every project. This is what makes
+// "load individually" possible for a project restored via Load Full Data —
+// no raw rows are needed since the per-project breakdown already has
+// everything (points, Fix Quality %, base/total bonus) for that project.
+function getCalcAllProjectScopedData(projectName){
+  return calcAllData
+    .filter(t=>(t.projects||[]).includes(projectName))
+    .map(t=>{
+      const p = (t.projectBreakdown||[]).find(pb=>pb.project===projectName);
+      if(!p) return null;
+      return {
+        ...t,
+        initial:p.initial, i3qa:p.i3qa, rv:p.rv, fix:p.fix, missed:p.missed,
+        refix:p.refix, warn:p.warn, points:p.points, qp:p.qp,
+        qualityPctMod:p.qualityPctMod, thresholdApplied:p.thresholdApplied,
+        baseBonus:p.baseBonus, totalBonus:p.totalBonus, bonusMult:p.mult,
+        projects:[projectName],
+        // Drill-down rows should only show what happened on this project.
+        srcI3qa:(t.srcI3qa||[]).filter(e=>e.project===projectName),
+        srcMissed:(t.srcMissed||[]).filter(e=>e.project===projectName),
+        srcRefix:(t.srcRefix||[]).filter(e=>e.project===projectName),
+        srcWarn:(t.srcWarn||[]).filter(e=>e.project===projectName)
+      };
+    })
+    .filter(Boolean);
+}
+
+function viewCalcAllProject(name){
+  calcAllProjectFilter = name;
+  if(currentView!=='calcall'){ switchView('calcall'); }
+  document.querySelectorAll('.project-item').forEach(el=>el.classList.toggle('active', el.dataset.name===name));
+  applyCalcAllFilter();
+}
+
+function clearCalcAllProjectFilter(){
+  calcAllProjectFilter = '';
+  document.querySelectorAll('.project-item.from-full-data').forEach(el=>el.classList.remove('active'));
+  applyCalcAllFilter();
+}
+
 function applyCalcAllFilter(){
   const q = (document.getElementById('ca-search-input')?.value||'').toLowerCase();
-  calcAllFiltered = calcAllData.filter(t=>{
+  const banner = document.getElementById('ca-project-filter-banner');
+  if(banner){
+    banner.style.display = calcAllProjectFilter ? 'flex' : 'none';
+    const nameEl = document.getElementById('ca-project-filter-name');
+    if(nameEl) nameEl.textContent = calcAllProjectFilter;
+  }
+  const sourceData = calcAllProjectFilter ? getCalcAllProjectScopedData(calcAllProjectFilter) : calcAllData;
+  calcAllFiltered = sourceData.filter(t=>{
     if(calcAllTeamFilter && t.team !== calcAllTeamFilter) return false;
     if(q && !(t.id.toLowerCase().includes(q)||t.name.toLowerCase().includes(q)||t.team.toLowerCase().includes(q))) return false;
     return true;
@@ -3774,6 +3837,7 @@ async function importCalcAllFullData(input){
     }
     calcAllData = data;
     calcAllFromFullData = true;
+    calcAllProjectFilter = '';
     if(payload.multiplier) document.getElementById('ca-mult').value = Number(payload.multiplier).toFixed(2);
 
     const allProjects = [...new Set(calcAllData.flatMap(t=>t.projects||[]))];
@@ -3936,7 +4000,24 @@ function openCalcAllDrilldown(techId, type){
   const meta = CALC_DRILL_META[type];
   if (!meta) return;
   const srcKey = 'src' + type.charAt(0).toUpperCase() + type.slice(1);
-  const entries = tech[srcKey] || [];
+  let entries = tech[srcKey] || [];
+  // When viewing a single project (via the sidebar), scope everything —
+  // rows, points, and DR/DRQ triggers — down to just that project instead
+  // of this tech's totals across every project.
+  let summaryTech = tech;
+  if(calcAllProjectFilter){
+    entries = entries.filter(e=>e.project===calcAllProjectFilter);
+    const pb = (tech.projectBreakdown||[]).find(p=>p.project===calcAllProjectFilter);
+    const drTriggers = (tech.drTriggers||[]).filter(t=>t.project===calcAllProjectFilter);
+    const drqTriggers = (tech.drqTriggers||[]).filter(t=>t.project===calcAllProjectFilter);
+    summaryTech = {
+      ...tech,
+      points: pb ? pb.points : tech.points,
+      totalDrDeduct: drTriggers.reduce((s,t)=>s+(t.deduct||0),0),
+      totalDrqDeduct: drqTriggers.reduce((s,t)=>s+(t.deduct||0),0),
+      drTriggers, drqTriggers
+    };
+  }
 
   document.getElementById('cad-title').textContent = `${meta.icon} ${meta.title} — ${tech.name||techId} (${techId})`;
   document.getElementById('cad-subtitle').innerHTML =
@@ -3961,7 +4042,7 @@ function openCalcAllDrilldown(techId, type){
     </tr>`;
   }).join('') : `<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text-muted);">No rows found.</td></tr>`;
 
-  document.getElementById('cad-summary').innerHTML = buildCalcAllDrillSummary(tech, type, entries);
+  document.getElementById('cad-summary').innerHTML = buildCalcAllDrillSummary(summaryTech, type, entries);
   document.getElementById('ca-drill-modal').classList.add('show');
 }
 
