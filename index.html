@@ -2693,7 +2693,7 @@ function parseDbf(buffer) { return parseDBF(buffer); }
 // Global to hold the last-loaded raw DBF records (used for reliable project saving)
 let currentRawRecords = [];
 
-async function loadParsedRows(rawRecords, name, fileCount) {
+async function loadParsedRows(rawRecords, name, fileCount, preserveTeamFilter) {
   await new Promise(r => setTimeout(r, 30));
   currentRawRecords = rawRecords; // store for saving
   allRows = processRecords(rawRecords);
@@ -2702,7 +2702,12 @@ async function loadParsedRows(rawRecords, name, fileCount) {
   currentBonusMultiplier = getSqmMultiplier(importSettings.sqm);
   techRows = buildTechStats(allRows.map(r => r._raw || r));
   filteredTech = [...techRows];
-  activeTeamFilter = '';
+  if (!preserveTeamFilter) activeTeamFilter = '';
+  else if (activeTeamFilter) {
+    // If the previously selected team doesn't exist in this project, fall back to All Teams
+    const teamsHere = new Set(techRows.map(t => t.team).filter(Boolean));
+    if (!teamsHere.has(activeTeamFilter)) activeTeamFilter = '';
+  }
   sortKey = 'total_points'; sortDir = -1;
   if (name) currentProjectName = name;
   filtered.sort((a,b) => b.total_points - a.total_points);
@@ -2710,7 +2715,7 @@ async function loadParsedRows(rawRecords, name, fileCount) {
   updateStats(allRows);
   buildTeamChips();
   renderTable();
-  renderTechTable();
+  if (activeTeamFilter) applyTechFilter(); else renderTechTable();
   document.getElementById('dropzone-wrap').style.display = 'none';
   document.getElementById('content-area').style.display = 'flex';
   document.getElementById('main-toolbar').style.display = '';
@@ -3196,7 +3201,7 @@ async function loadProject(name){
   // Priority 3: processed rows fallback (old format, degraded _raw)
   if(rawRecords && rawRecords.length){
     currentRawRecords = rawRecords;
-    await loadParsedRows(rawRecords, proj.name, 1);
+    await loadParsedRows(rawRecords, proj.name, 1, true);
   } else if(proj.rows && proj.rows.length){
     // Last resort: use processed rows (drill-down won't work but table will)
     currentRawRecords = proj.rows.map(r=>r._raw||{});
