@@ -3643,11 +3643,15 @@ function renderCalcAllTable(data){
 
 function exportCalcAllCSV(){
   if(!calcAllData.length){ toast('Run Calculate first'); return; }
+  // Always export the FULL merged dataset (all techs across all projects),
+  // regardless of any search box / team-chip filter currently applied to
+  // the on-screen table — the export is meant to be the complete combined
+  // report, not just what's currently visible.
   const cols=['id','name','team','teamNum','initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus'];
   const lines=[cols.join(',')];
   const numCols = new Set(['initial','i3qa','rv','fix','missed','refix','warn','points','qp','qualityPctMod','baseBonus','totalBonus']);
   const floatCols = new Set(['points','qp','baseBonus','totalBonus']);
-  calcAllFiltered.forEach(t=>lines.push(cols.map(c=>{
+  calcAllData.forEach(t=>lines.push(cols.map(c=>{
     const v=t[c];
     if(numCols.has(c)){
       const n=Number(v)||0;
@@ -3658,6 +3662,7 @@ function exportCalcAllCSV(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
   a.download=`calcall_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast(`✓ Exported ${calcAllData.length} techs across all projects`);
 }
 
 // ═══════════════════════════════════════════════════════════════
