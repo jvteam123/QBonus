@@ -301,7 +301,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <button class="btn btn-settings" onclick="openSettings()" title="Configure categories, points, detection rules, tech roster &amp; teams">⚙ Settings &amp; Roster</button>
       <button class="btn btn-ghost" onclick="openSaveModal()" id="btn-save-project" style="display:none">💾 Save Project</button>
       <button class="btn btn-primary" onclick="triggerFileInput()">⬆ Import File</button>
-      <input type="file" id="file-input-hidden" accept=".zip,.dbf" multiple style="display:none" />
+      <input type="file" id="file-input-hidden" accept=".zip,.dbf,.csv" multiple style="display:none" />
     </div>
   </div>
 
@@ -344,11 +344,11 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
       <!-- DROPZONE -->
       <div id="dropzone-wrap">
         <div id="dropzone">
-          <input type="file" id="file-input-dz" accept=".zip,.dbf" multiple />
+          <input type="file" id="file-input-dz" accept=".zip,.dbf,.csv" multiple />
           <div class="dz-icon">📂</div>
           <h2 style="font-size:1.05rem;font-weight:700;color:var(--text);">Drop your Fixpoints file here</h2>
-          <p>Accepts .zip (containing .dbf) or a bare .dbf file</p>
-          <div class="dz-hint">Drop one or multiple .dbf files · They will be merged into one project</div>
+          <p>Accepts .zip (containing .dbf) or a bare .dbf / .csv file</p>
+          <div class="dz-hint">Drop one or multiple .dbf/.csv files · They will be merged into one project</div>
         </div>
       </div>
 
@@ -979,7 +979,7 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
   <div class="modal modal-md">
     <div class="modal-header">
       <h3>➕ New Project</h3>
-      <span style="font-size:0.72rem;color:var(--text-muted);margin-left:8px;align-self:center;">Multiple .dbf files will be merged into one project</span>
+      <span style="font-size:0.72rem;color:var(--text-muted);margin-left:8px;align-self:center;">Multiple .dbf/.csv files will be merged into one project</span>
       <button class="modal-close" onclick="closeModal('new-project-modal')">✕</button>
     </div>
     <div class="modal-body">
@@ -1050,9 +1050,9 @@ table.qb-table tfoot td{padding:9px 12px;font-weight:700;font-size:0.78rem;white
           <div style="flex:1;min-width:0;">
             <div id="np-dropzone" onclick="document.getElementById('np-file-input').click()"
               style="border:2px dashed var(--border);border-radius:10px;background:#f7f9fc;padding:18px 16px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;">
-              <input type="file" id="np-file-input" accept=".zip,.dbf" multiple style="display:none" onchange="npFileChosen(this)" />
+              <input type="file" id="np-file-input" accept=".zip,.dbf,.csv" multiple style="display:none" onchange="npFileChosen(this)" />
               <div id="np-dz-icon" style="font-size:1.8rem;margin-bottom:6px;">📂</div>
-              <div id="np-dz-text" style="font-size:0.82rem;font-weight:600;color:var(--text);">Drop .dbf / .zip files here</div>
+              <div id="np-dz-text" style="font-size:0.82rem;font-weight:600;color:var(--text);">Drop .dbf / .zip / .csv files here</div>
               <div id="np-dz-sub" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">or click to browse — multiple files supported</div>
             </div>
             <!-- file list -->
@@ -2625,6 +2625,48 @@ async function handleFile(file){
   openImportModal(file);
 }
 
+// Parse a CSV file into the same record shape as parseDBF: an array of plain
+// objects keyed by UPPERCASE column headers (matching raw DBF field names like
+// UID, CATEGORY, QC_ID, I3QA_ID, I3QA_CAT, FIX1_ID, FIXED1?, AFP1_STAT, etc.)
+// Handles quoted fields, escaped quotes (""), commas/newlines inside quotes, and a BOM.
+function parseCSV(text) {
+  if (!text) return [];
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
+  const rows = [];
+  let i = 0, field = '', row = [], inQuotes = false;
+  const pushField = () => { row.push(field); field = ''; };
+  const pushRow = () => { rows.push(row); row = []; };
+  while (i < text.length) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    } else {
+      if (c === '"') { inQuotes = true; i++; continue; }
+      if (c === ',') { pushField(); i++; continue; }
+      if (c === '\r') { i++; continue; }
+      if (c === '\n') { pushField(); pushRow(); i++; continue; }
+      field += c; i++; continue;
+    }
+  }
+  if (field.length || row.length) { pushField(); pushRow(); }
+  while (rows.length && rows[rows.length-1].length === 1 && rows[rows.length-1][0] === '') rows.pop();
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim().toUpperCase());
+  const records = [];
+  for (let r = 1; r < rows.length; r++) {
+    const cols = rows[r];
+    if (cols.length === 1 && cols[0] === '') continue; // skip blank line
+    const rec = {};
+    headers.forEach((h, idx) => { rec[h] = (cols[idx] !== undefined ? cols[idx] : '').toString().trim(); });
+    records.push(rec);
+  }
+  return records;
+}
+
 function parseDBF(buffer){
   if (!buffer || buffer.byteLength < 32) return [];
   const view=new DataView(buffer);
@@ -3687,8 +3729,8 @@ function triggerFileInput(){document.getElementById('file-input-hidden').click()
 
 // Open New Project modal pre-loaded with dropped/selected files
 function openNewProjectWithFiles(files) {
-  const dbfFiles = Array.from(files).filter(f => /\.(dbf|zip)$/i.test(f.name));
-  if (!dbfFiles.length) { toast('Please drop .dbf or .zip files'); return; }
+  const dbfFiles = Array.from(files).filter(f => /\.(dbf|zip|csv)$/i.test(f.name));
+  if (!dbfFiles.length) { toast('Please drop .dbf, .csv, or .zip files'); return; }
   openNewProjectModal();
   dbfFiles.forEach(npAddFile);
 }
@@ -4388,15 +4430,15 @@ function openNewProjectModal() {
   dz.ondrop = e => {
     e.preventDefault();
     npResetDropzone();
-    const files = Array.from(e.dataTransfer.files).filter(f => /\.(dbf|zip)$/i.test(f.name));
+    const files = Array.from(e.dataTransfer.files).filter(f => /\.(dbf|zip|csv)$/i.test(f.name));
     if (files.length) files.forEach(npAddFile);
-    else toast('Drop .dbf or .zip files only');
+    else toast('Drop .dbf, .csv, or .zip files only');
   };
 }
 
 function npResetDropzone() {
   document.getElementById('np-dz-icon').textContent = '📂';
-  document.getElementById('np-dz-text').textContent = 'Drop .dbf / .zip files here';
+  document.getElementById('np-dz-text').textContent = 'Drop .dbf / .zip / .csv files here';
   document.getElementById('np-dz-sub').textContent  = 'or click to browse — multiple files supported';
   const dz = document.getElementById('np-dropzone');
   dz.style.borderColor = 'var(--border)';
@@ -4446,7 +4488,7 @@ function npUpdateFileList() {
     document.getElementById('np-dropzone').style.background  = '#f0fdf4';
     // Auto-fill project name from first filename if blank
     const nameInput = document.getElementById('np-name');
-    if (!nameInput.value.trim()) nameInput.value = npPendingFiles[0].name.replace(/\.(zip|dbf)$/i,'');
+    if (!nameInput.value.trim()) nameInput.value = npPendingFiles[0].name.replace(/\.(zip|dbf|csv)$/i,'');
   } else {
     npResetDropzone();
   }
@@ -4477,7 +4519,7 @@ async function confirmNewProject() {
   errEl.style.display = 'none';
 
   if (!name) { errEl.textContent = 'Please enter a project name.'; errEl.style.display = 'block'; return; }
-  if (!npPendingFiles.length) { errEl.textContent = 'Please choose at least one DBF or ZIP file.'; errEl.style.display = 'block'; return; }
+  if (!npPendingFiles.length) { errEl.textContent = 'Please choose at least one DBF, CSV, or ZIP file.'; errEl.style.display = 'block'; return; }
 
   const blocktype = document.getElementById('np-ir').checked ? 'IR' : 'NON';
   const site = document.querySelector('[data-group="np-site"].selected')?.dataset.val || 'Cebu';
@@ -4505,24 +4547,26 @@ async function confirmNewProject() {
 
       if (file.name.toLowerCase().endsWith('.zip')) {
         const zip = await JSZip.loadAsync(buf);
-        const dbfEntries = Object.values(zip.files).filter(f => f.name.toLowerCase().endsWith('.dbf'));
-        if (!dbfEntries.length) { toast(`No .dbf found in ${file.name}`); continue; }
-        for (const entry of dbfEntries) {
-          dbfBuffers.push({ buffer: await entry.async('arraybuffer'), label: entry.name });
+        const dataEntries = Object.values(zip.files).filter(f => /\.(dbf|csv)$/i.test(f.name));
+        if (!dataEntries.length) { toast(`No .dbf or .csv found in ${file.name}`); continue; }
+        for (const entry of dataEntries) {
+          const ext = entry.name.toLowerCase().endsWith('.csv') ? 'csv' : 'dbf';
+          dbfBuffers.push({ buffer: await entry.async('arraybuffer'), label: entry.name, ext });
         }
       } else {
-        dbfBuffers.push({ buffer: buf, label: file.name });
+        const ext = file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'dbf';
+        dbfBuffers.push({ buffer: buf, label: file.name, ext });
       }
     }
 
-    if (!dbfBuffers.length) { hideLoading(); toast('No valid DBF data found in the selected files.'); return; }
+    if (!dbfBuffers.length) { hideLoading(); toast('No valid DBF/CSV data found in the selected files.'); return; }
 
     // Parse each buffer and merge rows
     let mergedRows = [];
-    for (const { buffer, label } of dbfBuffers) {
+    for (const { buffer, label, ext } of dbfBuffers) {
       document.getElementById('loading-msg').textContent = `Parsing ${label}…`;
       await new Promise(r => setTimeout(r, 20));
-      const rows = parseDbf(buffer);
+      const rows = ext === 'csv' ? parseCSV(new TextDecoder('utf-8').decode(buffer)) : parseDbf(buffer);
       mergedRows = mergedRows.concat(rows);
     }
 
