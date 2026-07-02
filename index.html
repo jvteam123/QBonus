@@ -2113,7 +2113,7 @@ function processRecords(raw) {
     i3qa_label:r['I3QA_LABEL']||'',
     fix1_id:r['FIX1_ID']||'',
     fix1_date:r['FIX1_DATE']||'',
-    fixed1:r['FIXED1?']||'',
+    fixed1:r['FIXED1?']||r['FIXED1']||'',
     rv1_id:r['RV1_ID']||'',
     rv1_label:r['RV1_LABEL']||'',
     qa1_id:r['QA1_ID']||'',
@@ -3296,12 +3296,27 @@ async function refreshProjectList(){
 // CSV EXPORT
 // ═══════════════════════════════════════════════════════════════
 function downloadCSV(){
-  const cols=['uid','category','ir','qc_id','i3qa_id','i3qa_label','fix1_id','fix1_date','fixed1','rv1_id','rv1_label','qa1_id','qa1_label','zfix_count','total_points'];
-  const numCols=new Set(['category','zfix_count','total_points']);
-  const lines=[cols.join(',')];
+  // Export the ORIGINAL raw fields (r._raw), not just the small set of derived
+  // display columns. The raw fields (I3QA_CAT, FIXED1?, AFP1_STAT, COMBO?,
+  // rv2_id, warn/refix columns, etc.) are what processRecords()/parseCSV()
+  // expect on import - exporting only the friendly subset silently dropped
+  // those fields, so re-importing an exported CSV produced blank/zeroed
+  // values (e.g. fixed1 always read empty because the friendly column was
+  // named "fixed1" but the importer looks for "FIXED1?"). Exporting the raw
+  // record keeps export to import round-trips lossless.
+  const colSet=new Set();
+  filtered.forEach(r=>Object.keys(r._raw||{}).forEach(k=>colSet.add(k)));
+  // Keep a stable, readable ordering: known important fields first, then
+  // whatever else was present in the raw record, alphabetically.
+  const preferredOrder=['UID','CATEGORY','I3QA_CAT','QC_ID','I3QA_ID','I3QA_LABEL',
+    'FIX1_ID','FIX1_DATE','FIXED1?','RV1_ID','RV1_LABEL','QA1_ID','QA1_LABEL',
+    'AFP1_STAT','AFP1_CAT','COMBO?'];
+  const cols=[...preferredOrder.filter(c=>colSet.has(c)),
+    ...[...colSet].filter(c=>!preferredOrder.includes(c)).sort()];
+  if(!cols.length){ toast('Nothing to export'); return; }
+  const lines=[cols.map(c=>`"${c.replace(/"/g,'""')}"`).join(',')];
   filtered.forEach(r=>lines.push(cols.map(c=>{
-    const v=r[c];
-    if(numCols.has(c)) return isNaN(Number(v))||v===''||v==null?'0':(c==='total_points'?Number(v).toFixed(4):String(Number(v)));
+    const v=(r._raw||{})[c];
     return `"${String(v??'').replace(/"/g,'""')}"`;
   }).join(',')));
   const a=document.createElement('a');
