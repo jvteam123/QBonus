@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PH Payslip & Statutory Tax Calculator (2026)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Premium Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .payslip-font {
+            font-family: 'Courier Prime', monospace;
+        }
+        .double-underline {
+            border-bottom: 4px double #0f172a;
+        }
+        /* Custom print formatting */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-full-width {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+            .payslip-input {
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+            }
+            .lock-button {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen py-6 px-4 sm:px-6 lg:px-8">
+
+<div class="max-w-7xl mx-auto print-full-width">
+    
+    <!-- Top Header Panel (no-print) -->
+    <header class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-slate-200 no-print">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-blue-600 text-white rounded-md">PRO VERSION</span>
+                <span class="text-slate-500 text-xs font-medium">Updated for 2026 Mandates</span>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-950 mt-1 tracking-tight">PH Interactive Payslip & Tax Engine</h1>
+            <p class="text-slate-600 text-sm mt-1">Simulate corporate payrolls, modify individual items manually, and analyze BIR withholding tax brackets.</p>
+        </div>
+        <div class="mt-4 md:mt-0 flex space-x-3">
+            <button onclick="window.print()" class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 shadow-xs px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center transition-all">
+                <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Print / Export PDF
+            </button>
+            <button onclick="resetAllFields()" class="bg-slate-900 hover:bg-slate-850 text-white shadow-xs px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center transition-all">
+                <svg class="w-4 h-4 mr-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15H18"></path></svg>
+                Restore Auto-Defaults
+            </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 print-full-width">
+        
+        <!-- Left Column: Controls & Dynamic Analysis (no-print) -->
+        <div class="lg:col-span-5 space-y-8 no-print">
+            
+            <!-- Core Input Controls -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6">
+                <h2 class="text-base font-bold text-slate-950 mb-5 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Salary Configuration
+                </h2>
+
+                <!-- Salary Basis Type -->
+                <div class="mb-5">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Salary Basis Mode</label>
+                    <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-lg">
+                        <button id="btnBasisSemi" onclick="toggleSalaryBasis('semi')" class="py-2 text-xs font-semibold rounded-md transition-all duration-150 bg-white text-slate-800 shadow-xs">
+                            Semi-Monthly (Cutoff)
+                        </button>
+                        <button id="btnBasisMonthly" onclick="toggleSalaryBasis('monthly')" class="py-2 text-xs font-semibold rounded-md transition-all duration-150 text-slate-500 hover:text-slate-850">
+                            Monthly Total
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Salary Entry Box -->
+                <div class="mb-5">
+                    <label id="salaryInputLabel" for="mainSalaryInput" class="block text-sm font-semibold text-slate-700 mb-2">Semi-Monthly Gross Salary (₱)</label>
+                    <div class="relative rounded-lg shadow-xs">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <span class="text-slate-400 font-semibold sm:text-sm">₱</span>
+                        </div>
+                        <input type="number" id="mainSalaryInput" oninput="handleSalaryChange()" class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-semibold focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm transition-all" value="23313.13" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <!-- Contribution Schedule Split Option -->
+                <div class="mb-5">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2.5">Gov't Deduction Allocation</label>
+                    <div class="grid grid-cols-1 gap-2.5">
+                        <label class="relative flex items-start p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+                            <div class="flex items-center h-5">
+                                <input type="radio" name="deductionSchedule" value="split" checked onclick="calculateAll()" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300">
+                            </div>
+                            <div class="ml-3">
+                                <span class="block text-xs font-bold text-slate-900">Split evenly (50 / 50)</span>
+                                <span class="block text-[10px] text-slate-500 mt-0.5">Deduct 50% of monthly SSS/PhH/HDMF premiums per cutoff.</span>
+                            </div>
+                        </label>
+                        <label class="relative flex items-start p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-all">
+                            <div class="flex items-center h-5">
+                                <input type="radio" name="deductionSchedule" value="full" onclick="calculateAll()" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300">
+                            </div>
+                            <div class="ml-3">
+                                <span class="block text-xs font-bold text-slate-900">Apply entire monthly deduction</span>
+                                <span class="block text-[10px] text-slate-500 mt-0.5">Apply 100% of statutory dues to this single payslip cycle.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Employer Share Toggle -->
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                        <span class="block text-xs font-bold text-slate-800">Employer Counterpart Matching</span>
+                        <span class="block text-[10px] text-slate-400">View SSS/PhilHealth/HDMF corporate matching cost.</span>
+                    </div>
+                    <button id="btnEmployerToggle" onclick="toggleEmployerShare()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-all">
+                        Show Contributions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tax Math Logic Explainer -->
+            <div id="taxExplainerCard" class="bg-slate-900 text-slate-200 rounded-2xl shadow-xs p-6">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    Deduction & Tax Math Step-by-Step
+                </h3>
+                <div class="space-y-4 text-xs font-normal">
+                    <div>
+                        <span class="text-slate-400 block font-semibold">Step 1: Determine Gross Income</span>
+                        <p id="taxStep1" class="font-mono mt-0.5 text-white">Gross pay for current cutoff: ₱0.00</p>
+                    </div>
+                    <div class="border-t border-slate-800 pt-3">
+                        <span class="text-slate-400 block font-semibold">Step 2: Less Statutory Contributions</span>
+                        <p id="taxStep2" class="font-mono mt-0.5 text-white">Non-taxable statutory dues: ₱0.00</p>
+                    </div>
+                    <div class="border-t border-slate-800 pt-3">
+                        <span class="text-slate-400 block font-semibold">Step 3: Find Taxable Base</span>
+                        <p id="taxStep3" class="font-mono mt-0.5 text-white">Taxable Income Base: ₱0.00</p>
+                    </div>
+                    <div class="border-t border-slate-800 pt-3 bg-slate-850 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-blue-300 block font-bold mb-1">Step 4: Matched BIR Bracket Formula</span>
+                        <p id="taxStep4Text" class="text-[11px] leading-relaxed text-slate-300">Determining appropriate bracket...</p>
+                        <p id="taxStep4Math" class="font-mono mt-1 text-sm font-bold text-emerald-400">Tax Dues: ₱0.00</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Premium Interactive Payslip & Exportable Card -->
+        <div class="lg:col-span-7 print-full-width">
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8 relative print-full-width">
+                
+                <!-- Payslip Header Metadata -->
+                <div class="border-b-2 border-slate-200 pb-5 mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div class="space-y-1">
+                        <!-- Custom Business Title (Editable) -->
+                        <input type="text" id="payslipCompany" value="ACME CORPORATION PHILIPPINES" class="payslip-font font-bold text-slate-800 uppercase text-sm border-b border-dashed border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none bg-transparent w-full sm:w-80">
+                        
+                        <div class="flex flex-col space-y-0.5 mt-2">
+                            <!-- Custom Employee Details (Editable) -->
+                            <div class="text-[11px] text-slate-500 font-mono">
+                                EMPLOYEE: <input type="text" id="payslipEmployee" value="JUAN DELA CRUZ" class="text-slate-700 font-semibold border-b border-dashed border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none bg-transparent py-0 px-1 w-36">
+                            </div>
+                            <div class="text-[11px] text-slate-500 font-mono">
+                                PERIOD: <input type="text" id="payslipPeriod" value="JULY 1 - JULY 15, 2026" class="text-slate-700 font-semibold border-b border-dashed border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none bg-transparent py-0 px-1 w-48">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-end justify-end">
+                        <span class="payslip-font text-xs font-bold text-slate-400 tracking-widest">OFFICIAL PAY STUB PREVIEW</span>
+                        <div class="flex items-center space-x-12 mt-4 text-[11px] font-bold text-slate-800 tracking-wider payslip-font">
+                            <span>(H)</span>
+                            <span>CURRENT</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EARNINGS BLOCK -->
+                <div class="mb-5">
+                    <div class="text-xs font-extrabold text-slate-950 mb-3 tracking-widest uppercase">EARNINGS</div>
+                    <div class="flex items-center justify-between py-2 border-b border-slate-100">
+                        <div class="flex flex-col">
+                            <span class="text-xs sm:text-sm text-slate-800 payslip-font">Gross Base Salary</span>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-tight font-mono">Semi-monthly portion</span>
+                        </div>
+                        <div class="flex items-center space-x-12 text-xs sm:text-sm payslip-font font-bold">
+                            <span class="text-slate-300">0.00</span>
+                            <span id="payslipGrossDisplay" class="w-24 text-right">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GROSS TOTAL ROW -->
+                <div class="flex justify-between items-center py-2 px-2 border-t border-slate-900 border-b border-slate-900 mb-6 bg-slate-50/50">
+                    <span class="text-xs font-bold text-slate-950 tracking-wider">GROSS PAY</span>
+                    <span id="payslipGrossTotalDisplay" class="text-xs sm:text-sm font-bold text-slate-950 payslip-font">0.00</span>
+                </div>
+
+                <!-- DEDUCTIONS BLOCK -->
+                <div class="mb-6 space-y-3.5">
+                    <div class="text-xs font-extrabold text-slate-950 mb-3 tracking-widest uppercase">DEDUCTIONS</div>
+                    
+                    <!-- SSS -->
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <div class="flex flex-col">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs sm:text-sm text-slate-800 payslip-font">SSS Employee Cont</span>
+                                <span id="labelBadgeSss" class="text-[9px] px-1.5 py-0.2 font-semibold rounded-full bg-blue-50 text-blue-700 font-mono no-print">AUTO</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-tight font-mono">Statutory Premium share</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400 font-mono">- ₱</span>
+                            <input type="number" id="fieldSss" oninput="handleOverride('sss')" class="payslip-input w-24 text-xs sm:text-sm font-bold text-slate-800 focus:ring-1 focus:ring-blue-500" value="0.00" step="0.01">
+                            <button id="lockSss" onclick="resetSingleField('sss')" title="Lock to Auto Mode" class="lock-button text-slate-400 hover:text-blue-600 p-1 no-print">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- HDMF / Pag-IBIG -->
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <div class="flex flex-col">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs sm:text-sm text-slate-800 payslip-font">HDMF Employee (Pag-IBIG)</span>
+                                <span id="labelBadgeHdmf" class="text-[9px] px-1.5 py-0.2 font-semibold rounded-full bg-blue-50 text-blue-700 font-mono no-print">AUTO</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-tight font-mono">Maximum ₱200 capping</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400 font-mono">- ₱</span>
+                            <input type="number" id="fieldHdmf" oninput="handleOverride('hdmf')" class="payslip-input w-24 text-xs sm:text-sm font-bold text-slate-800 focus:ring-1 focus:ring-blue-500" value="0.00" step="0.01">
+                            <button id="lockHdmf" onclick="resetSingleField('hdmf')" title="Lock to Auto Mode" class="lock-button text-slate-400 hover:text-blue-600 p-1 no-print">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PhilHealth -->
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <div class="flex flex-col">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs sm:text-sm text-slate-800 payslip-font">PhilHealth Employee</span>
+                                <span id="labelBadgePhilhealth" class="text-[9px] px-1.5 py-0.2 font-semibold rounded-full bg-blue-50 text-blue-700 font-mono no-print">AUTO</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-tight font-mono">2.5% Employee share rate</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400 font-mono">- ₱</span>
+                            <input type="number" id="fieldPhilhealth" oninput="handleOverride('philhealth')" class="payslip-input w-24 text-xs sm:text-sm font-bold text-slate-800 focus:ring-1 focus:ring-blue-500" value="0.00" step="0.01">
+                            <button id="lockPhilhealth" onclick="resetSingleField('philhealth')" title="Lock to Auto Mode" class="lock-button text-slate-400 hover:text-blue-600 p-1 no-print">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Withholding Tax -->
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <div class="flex flex-col">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs sm:text-sm text-slate-800 payslip-font font-semibold">Withholding Tax</span>
+                                <span id="labelBadgeTax" class="text-[9px] px-1.5 py-0.2 font-semibold rounded-full bg-blue-50 text-blue-700 font-mono no-print">AUTO</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-tight font-mono">Matched BIR Schedule Bracket</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400 font-mono font-semibold">- ₱</span>
+                            <input type="number" id="fieldTax" oninput="handleOverride('tax')" class="payslip-input w-24 text-xs sm:text-sm font-bold text-slate-800 focus:ring-1 focus:ring-blue-500" value="0.00" step="0.01">
+                            <button id="lockTax" onclick="resetSingleField('tax')" title="Lock to Auto Mode" class="lock-button text-slate-400 hover:text-blue-600 p-1 no-print">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dependent Program (Optional Extra Deduction) -->
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <div class="flex flex-col">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs sm:text-sm text-slate-800 payslip-font">Dependent Program</span>
+                                <span id="labelBadgeDependent" class="text-[9px] px-1.5 py-0.2 font-semibold rounded-full bg-amber-50 text-amber-700 font-mono no-print">MANUAL</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-tight font-mono">Custom voluntary deductions</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400 font-mono">- ₱</span>
+                            <input type="number" id="fieldDependent" oninput="handleOverride('dependent')" class="payslip-input w-24 text-xs sm:text-sm font-bold text-slate-800 focus:ring-1 focus:ring-blue-500" value="2495.09" step="0.01">
+                            <button id="lockDependent" onclick="resetSingleField('dependent')" title="Lock to Auto Mode" class="lock-button text-slate-400 hover:text-blue-600 p-1 no-print">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EMPLOYER PORTION (HIDDEN BY DEFAULT) -->
+                <div id="employerSharePanel" class="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 no-print hidden">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex justify-between items-center">
+                        <span>EMPLOYER COUNTERPART (NOT DEDUCTED FROM NET PAY)</span>
+                        <button onclick="toggleEmployerShare()" class="text-red-500 hover:text-red-700 font-semibold uppercase">Hide</button>
+                    </div>
+                    <div class="flex items-center justify-between text-xs py-1 border-b border-dashed border-slate-200">
+                        <span class="text-slate-600 payslip-font">SSS Employer Share:</span>
+                        <span id="displaySssEmployer" class="font-bold font-mono text-slate-700">₱0.00</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs py-1 border-b border-dashed border-slate-200">
+                        <span class="text-slate-600 payslip-font">PhilHealth Employer Share:</span>
+                        <span id="displayPhilhealthEmployer" class="font-bold font-mono text-slate-700">₱0.00</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs py-1 border-b border-dashed border-slate-200">
+                        <span class="text-slate-600 payslip-font">Pag-IBIG Employer Share:</span>
+                        <span id="displayHdmfEmployer" class="font-bold font-mono text-slate-700">₱0.00</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs font-bold pt-1 text-slate-800">
+                        <span>Total Additional Corporate Cost:</span>
+                        <span id="displayEmployerTotal" class="font-mono text-blue-600">₱0.00</span>
+                    </div>
+                </div>
+
+                <!-- NET PAY ROW WITH TRADITIONAL DOUBLE UNDERLINE -->
+                <div class="flex justify-between items-center py-3.5 px-2 double-underline mt-12 bg-slate-50/70 rounded-md">
+                    <span class="text-sm font-bold text-slate-900 tracking-wider">NET TAKE-HOME PAY</span>
+                    <span id="displayNetPayTotal" class="text-base sm:text-xl font-extrabold text-slate-950 payslip-font">0.00</span>
+                </div>
+
+                <!-- Dynamic Override Alert Strip (no-print) -->
+                <div id="overrideAlertBadge" class="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 no-print">
+                    <span id="overrideBadgeSpan" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        ⚡ Active Auto-Calculation Mode
+                    </span>
+                    <span class="font-medium font-mono">PH Payroll Engine v2026.1</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Reference Blocks (no-print) -->
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 no-print">
+        
+        <!-- BIR Reference -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
+            <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider mb-4">TRAIN Withholding Tax Table (Semi-Monthly)</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-800 font-bold border-b border-slate-200">
+                            <th class="py-2 px-2.5">Bracket</th>
+                            <th class="py-2 px-2.5">Cutoff Range of Taxable Income</th>
+                            <th class="py-2 px-2.5">Tax Formulation Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr id="birRow1">
+                            <td class="py-2 px-2.5 font-bold">1</td>
+                            <td class="py-2 px-2.5">₱10,417 and below</td>
+                            <td class="py-2 px-2.5 font-semibold text-emerald-600">0% (Tax-Exempt)</td>
+                        </tr>
+                        <tr id="birRow2">
+                            <td class="py-2 px-2.5 font-bold">2</td>
+                            <td class="py-2 px-2.5">₱10,417 – ₱16,666</td>
+                            <td class="py-2 px-2.5">15% of the excess over ₱10,417</td>
+                        </tr>
+                        <tr id="birRow3">
+                            <td class="py-2 px-2.5 font-bold">3</td>
+                            <td class="py-2 px-2.5">₱16,667 – ₱33,332</td>
+                            <td class="py-2 px-2.5">₱1,250 + 20% of the excess over ₱16,667</td>
+                        </tr>
+                        <tr id="birRow4">
+                            <td class="py-2 px-2.5 font-bold">4</td>
+                            <td class="py-2 px-2.5">₱33,333 – ₱83,332</td>
+                            <td class="py-2 px-2.5">₱5,416.67 + 25% of the excess over ₱33,333</td>
+                        </tr>
+                        <tr id="birRow5">
+                            <td class="py-2 px-2.5 font-bold">5</td>
+                            <td class="py-2 px-2.5">₱83,333 – ₱333,332</td>
+                            <td class="py-2 px-2.5">₱20,416.67 + 30% of the excess over ₱83,333</td>
+                        </tr>
+                        <tr id="birRow6">
+                            <td class="py-2 px-2.5 font-bold">6</td>
+                            <td class="py-2 px-2.5">₱333,333 and above</td>
+                            <td class="py-2 px-2.5">₱100,416.67 + 35% of the excess over ₱333,333</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Explanatory Manual / Instructions -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
+            <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider mb-4">How To Use Granular Overrides</h3>
+            <div class="space-y-3.5 text-xs text-slate-600 leading-relaxed">
+                <p>
+                    <strong class="text-slate-800 font-bold block">1. Dynamic Override System</strong>
+                    To simulate atypical deductions (such as an employee electing higher Pag-IBIG contributions or SSS adjustments), simply highlight any value inside the payslip and enter a custom amount.
+                </p>
+                <p>
+                    <strong class="text-slate-800 font-bold block">2. Visual Locking Badges</strong>
+                    Each modified item switches from a blue <span class="bg-blue-50 text-blue-700 px-1 py-0.2 rounded font-mono font-bold text-[9px]">AUTO</span> badge to an orange <span class="bg-amber-50 text-amber-700 px-1 py-0.2 rounded font-mono font-bold text-[9px]">MANUAL</span> badge. 
+                </p>
+                <p>
+                    <strong class="text-slate-800 font-bold block">3. Easy Recovery</strong>
+                    To return a modified field back to its default formula, click the miniature <strong class="text-blue-500">Padlock icon</strong> to its right. To restore the entire screen back to its default state, click <strong class="text-slate-800">"Restore Auto-Defaults"</strong> at the top.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State Tracker
+    let salaryBasis = 'semi'; // "semi" or "monthly"
+    
+    // Tracks if each deduction field has a manual user override active
+    const overrideStates = {
+        sss: false,
+        hdmf: false,
+        philhealth: false,
+        tax: false,
+        dependent: true // Defaults to true because dependent is purely a customized program
+    };
+
+    // Keep cached variables of computed values
+    const cachedDefaults = {
+        sss: 0,
+        hdmf: 0,
+        philhealth: 0,
+        tax: 0,
+        dependent: 2495.09
+    };
+
+    // Toggle Salary Inputs & update corresponding text representation
+    function toggleSalaryBasis(basis) {
+        salaryBasis = basis;
+        const btnSemi = document.getElementById('btnBasisSemi');
+        const btnMonthly = document.getElementById('btnBasisMonthly');
+        const salaryInputLabel = document.getElementById('salaryInputLabel');
+        const salaryInput = document.getElementById('mainSalaryInput');
+
+        const currentVal = parseFloat(salaryInput.value) || 0;
+
+        if (basis === 'semi') {
+            btnSemi.className = "py-2 text-xs font-semibold rounded-md transition-all duration-150 bg-white text-slate-800 shadow-xs";
+            btnMonthly.className = "py-2 text-xs font-semibold rounded-md transition-all duration-150 text-slate-500 hover:text-slate-850";
+            salaryInputLabel.innerText = "Semi-Monthly Gross Salary (₱)";
+            
+            // Convert monthly salary value back to semi-monthly equivalent
+            if (currentVal > 0) {
+                salaryInput.value = (currentVal / 2).toFixed(2);
+            }
+        } else {
+            btnSemi.className = "py-2 text-xs font-semibold rounded-md transition-all duration-150 text-slate-500 hover:text-slate-850";
+            btnMonthly.className = "py-2 text-xs font-semibold rounded-md transition-all duration-150 bg-white text-slate-800 shadow-xs";
+            salaryInputLabel.innerText = "Monthly Gross Salary (₱)";
+            
+            // Convert semi-monthly salary up to monthly equivalent
+            if (currentVal > 0) {
+                salaryInput.value = (currentVal * 2).toFixed(2);
+            }
+        }
+
+        calculateAll();
+    }
+
+    // Trigger calculation updates when the main salary input changes
+    function handleSalaryChange() {
+        calculateAll();
+    }
+
+    // Core Calculation Routine
+    function calculateAll() {
+        const rawSalaryInput = parseFloat(document.getElementById('mainSalaryInput').value) || 0;
+        
+        let semiMonthlyGross = 0;
+        let monthlyEquivalent = 0;
+
+        if (salaryBasis === 'semi') {
+            semiMonthlyGross = rawSalaryInput;
+            monthlyEquivalent = rawSalaryInput * 2;
+        } else {
+            semiMonthlyGross = rawSalaryInput / 2;
+            monthlyEquivalent = rawSalaryInput;
+        }
+
+        // Display Gross Pay on payslip
+        document.getElementById('payslipGrossDisplay').innerText = formatNum(semiMonthlyGross);
+        document.getElementById('payslipGrossTotalDisplay').innerText = formatNum(semiMonthlyGross);
+
+        // Fetch user preferences for splits
+        const scheduleMode = document.querySelector('input[name="deductionSchedule"]:checked').value;
+        const deductionDivisor = (scheduleMode === 'split') ? 2 : 1;
+
+        // Calculate 2026 Monthly Statutory Limits
+        const monthlySss = computeSssPremium(monthlyEquivalent);
+        const monthlyPhilhealth = computePhilhealthPremium(monthlyEquivalent);
+        const monthlyHdmf = computeHdmfPremium(monthlyEquivalent);
+
+        // Store computed values in cache
+        cachedDefaults.sss = monthlySss / deductionDivisor;
+        cachedDefaults.philhealth = monthlyPhilhealth / deductionDivisor;
+        cachedDefaults.hdmf = monthlyHdmf / deductionDivisor;
+
+        // Update fields if they are in Auto Calculation mode
+        if (!overrideStates.sss) {
+            document.getElementById('fieldSss').value = cachedDefaults.sss.toFixed(2);
+        }
+        if (!overrideStates.philhealth) {
+            document.getElementById('fieldPhilhealth').value = cachedDefaults.philhealth.toFixed(2);
+        }
+        if (!overrideStates.hdmf) {
+            document.getElementById('fieldHdmf').value = cachedDefaults.hdmf.toFixed(2);
+        }
+
+        // Withholding Tax Calculation Logic
+        // Calculate taxable base. Taxable Income = Gross pay minus non-taxable contributions.
+        const currentSssDeduction = parseFloat(document.getElementById('fieldSss').value) || 0;
+        const currentPhilhealthDeduction = parseFloat(document.getElementById('fieldPhilhealth').value) || 0;
+        const currentHdmfDeduction = parseFloat(document.getElementById('fieldHdmf').value) || 0;
+
+        const totalStatutoryDuesForCutoff = currentSssDeduction + currentPhilhealthDeduction + currentHdmfDeduction;
+        const calculatedTaxableIncome = Math.max(0, semiMonthlyGross - totalStatutoryDuesForCutoff);
+
+        // Store computed tax in cache
+        const matchedTaxResult = computeTaxFromBrackets(calculatedTaxableIncome);
+        cachedDefaults.tax = matchedTaxResult.taxAmount;
+
+        if (!overrideStates.tax) {
+            document.getElementById('fieldTax').value = cachedDefaults.tax.toFixed(2);
+        }
+
+        // Update Employer counterparts display
+        updateEmployerCounterpartPanel(monthlyEquivalent, deductionDivisor);
+
+        // Finalize Net Pay total
+        processNetPayTotal(semiMonthlyGross);
+
+        // Render detailed mathematical steps inside explainer card
+        updateMathExplainer(semiMonthlyGross, totalStatutoryDuesForCutoff, calculatedTaxableIncome, matchedTaxResult);
+
+        // Highlight matched BIR row in background
+        highlightBirTableRow(matchedTaxResult.bracketId);
+
+        // Update Badges UI to accurately reflect override situations
+        refreshBadgeUi();
+    }
+
+    function computeSssPremium(salary) {
+        // Minimum bracket starts at below 5,250 with MSC of 5,000. Employee rate is 5%.
+        if (salary < 5250) return 250.00;
+        // Maximum bracket ends at 34,750 and above with MSC of 35,000. Employee rate is 5%.
+        if (salary >= 34750) return 1750.00;
+
+        // Middle MSC brackets increment by 500 pesos. Find proper matching credit step.
+        let msc = Math.floor((salary - 250) / 500) * 500 + 500;
+        msc = Math.min(35000, Math.max(5000, msc));
+        return msc * 0.05;
+    }
+
+    function computePhilhealthPremium(salary) {
+        // Minimum contribution floor of ₱10,000 base. Employee share is 2.5%.
+        if (salary < 10000) return 250.00;
+        // Maximum contribution cap at ₱100,000 base. Employee share is 2.5%.
+        if (salary > 100000) return 2500.00;
+        
+        // standard rate of basic monthly pay split evenly (2.5% for employee)
+        return salary * 0.025;
+    }
+
+    function computeHdmfPremium(salary) {
+        // Pag-IBIG employee share rate is 2% of actual basic income, capped at a maximum base of ₱10,000
+        if (salary <= 1500) return salary * 0.01;
+        return Math.min(200.00, salary * 0.02);
+    }
+
+    function computeTaxFromBrackets(taxableIncome) {
+        let tax = 0;
+        let bracketId = 1;
+        let mathFormulaDesc = "";
+
+        if (taxableIncome <= 10417) {
+            tax = 0;
+            bracketId = 1;
+            mathFormulaDesc = "Income below tax-exempt threshold of ₱10,417.";
+        } else if (taxableIncome <= 16666) {
+            tax = (taxableIncome - 10417) * 0.15;
+            bracketId = 2;
+            mathFormulaDesc = "15% of excess over ₱10,417.";
+        } else if (taxableIncome <= 33332) {
+            tax = 1250 + (taxableIncome - 16667) * 0.20;
+            bracketId = 3;
+            mathFormulaDesc = "₱1,250 base tax + 20% of excess over ₱16,667.";
+        } else if (taxableIncome <= 83332) {
+            tax = 5416.67 + (taxableIncome - 33333) * 0.25;
+            bracketId = 4;
+            mathFormulaDesc = "₱5,416.67 base tax + 25% of excess over ₱33,333.";
+        } else if (taxableIncome <= 333332) {
+            tax = 20416.67 + (taxableIncome - 83333) * 0.30;
+            bracketId = 5;
+            mathFormulaDesc = "₱20,416.67 base tax + 30% of excess over ₱83,333.";
+        } else {
+            tax = 100416.67 + (taxableIncome - 333333) * 0.35;
+            bracketId = 6;
+            mathFormulaDesc = "₱100,416.67 base tax + 35% of excess over ₱333,333.";
+        }
+
+        return {
+            taxAmount: tax,
+            bracketId: bracketId,
+            formula: mathFormulaDesc
+        };
+    }
+
+    // Calculate final Net Pay total from DOM inputs
+    function processNetPayTotal(grossSalary) {
+        const sss = parseFloat(document.getElementById('fieldSss').value) || 0;
+        const hdmf = parseFloat(document.getElementById('fieldHdmf').value) || 0;
+        const philhealth = parseFloat(document.getElementById('fieldPhilhealth').value) || 0;
+        const tax = parseFloat(document.getElementById('fieldTax').value) || 0;
+        const dependent = parseFloat(document.getElementById('fieldDependent').value) || 0;
+
+        const totalDeductions = sss + hdmf + philhealth + tax + dependent;
+        const finalNetPay = Math.max(0, grossSalary - totalDeductions);
+
+        document.getElementById('displayNetPayTotal').innerText = formatNum(finalNetPay);
+    }
+
+    function handleOverride(field) {
+        overrideStates[field] = true;
+        
+        // Recalculate tax immediately if the altered fields were statutory deductions
+        if (field === 'sss' || field === 'philhealth' || field === 'hdmf') {
+            const rawSalaryInput = parseFloat(document.getElementById('mainSalaryInput').value) || 0;
+            const semiMonthlyGross = (salaryBasis === 'semi') ? rawSalaryInput : rawSalaryInput / 2;
+
+            const sss = parseFloat(document.getElementById('fieldSss').value) || 0;
+            const hdmf = parseFloat(document.getElementById('fieldHdmf').value) || 0;
+            const philhealth = parseFloat(document.getElementById('fieldPhilhealth').value) || 0;
+
+            const totalStatDues = sss + hdmf + philhealth;
+            const taxableIncome = Math.max(0, semiMonthlyGross - totalStatDues);
+
+            const matchedTax = computeTaxFromBrackets(taxableIncome);
+            cachedDefaults.tax = matchedTax.taxAmount;
+
+            // Only update the tax input dynamically if tax is still set to auto
+            if (!overrideStates.tax) {
+                document.getElementById('fieldTax').value = cachedDefaults.tax.toFixed(2);
+            }
+        }
+
+        // Recalculate net totals and update visual indicators
+        const rawSalaryInput = parseFloat(document.getElementById('mainSalaryInput').value) || 0;
+        const semiMonthlyGross = (salaryBasis === 'semi') ? rawSalaryInput : rawSalaryInput / 2;
+        processNetPayTotal(semiMonthlyGross);
+        
+        // Re-evaluate the tax math explainer based on the customized inputs
+        const customSss = parseFloat(document.getElementById('fieldSss').value) || 0;
+        const customPhilhealth = parseFloat(document.getElementById('fieldPhilhealth').value) || 0;
+        const customHdmf = parseFloat(document.getElementById('fieldHdmf').value) || 0;
+        const customTax = parseFloat(document.getElementById('fieldTax').value) || 0;
+
+        const customStatDues = customSss + customPhilhealth + customHdmf;
+        const customTaxableIncome = Math.max(0, semiMonthlyGross - customStatDues);
+        const customMatchedTaxResult = computeTaxFromBrackets(customTaxableIncome);
+        // Override the tax amount in explainer with the user's manual tax value
+        customMatchedTaxResult.taxAmount = customTax;
+
+        updateMathExplainer(semiMonthlyGross, customStatDues, customTaxableIncome, customMatchedTaxResult);
+        refreshBadgeUi();
+    }
+
+    // Reset a single overridden field back to formula-computed values
+    function resetSingleField(field) {
+        overrideStates[field] = false;
+        
+        // If dependent program, default back to its static starting baseline
+        if (field === 'dependent') {
+            document.getElementById('fieldDependent').value = cachedDefaults.dependent.toFixed(2);
+            overrideStates.dependent = true; // Stay in manual badge state as it's not a BIR statutory deduction
+        }
+
+        calculateAll();
+    }
+
+    // Global reset of all manual edits back to original formula state
+    function resetAllFields() {
+        for (let key in overrideStates) {
+            overrideStates[key] = false;
+        }
+        // Keep dependent in manual, but reset value
+        overrideStates.dependent = true;
+        document.getElementById('fieldDependent').value = cachedDefaults.dependent.toFixed(2);
+
+        calculateAll();
+    }
+
+    function toggleEmployerShare() {
+        const panel = document.getElementById('employerSharePanel');
+        const btn = document.getElementById('btnEmployerToggle');
+
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            btn.innerText = "Hide Contributions";
+            btn.className = "px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-all";
+        } else {
+            panel.classList.add('hidden');
+            btn.innerText = "Show Contributions";
+            btn.className = "px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-all";
+        }
+    }
+
+    function updateEmployerCounterpartPanel(monthlyGross, deductionDivisor) {
+        // SSS Employer matches (Ranges under RA 11199 are roughly 10% employer share)
+        let sssEmployerVal = 0;
+        if (monthlyGross < 5250) sssEmployerVal = 500.00;
+        else if (monthlyGross >= 34750) sssEmployerVal = 3500.00;
+        else {
+            let msc = Math.floor((monthlyGross - 250) / 500) * 500 + 500;
+            msc = Math.min(35000, Math.max(5000, msc));
+            sssEmployerVal = msc * 0.10;
+        }
+
+        // Philhealth Employer matches employee share equally (2.5%)
+        const philhealthEmployerVal = computePhilhealthPremium(monthlyGross);
+
+        // Pag-IBIG Employer matches employee 2% cap equally (₱200 max)
+        const hdmfEmployerVal = computeHdmfPremium(monthlyGross);
+
+        // Apportion matching cost correctly based on schedule splits
+        const sssEmployerCutoff = sssEmployerVal / deductionDivisor;
+        const philhealthEmployerCutoff = philhealthEmployerVal / deductionDivisor;
+        const hdmfEmployerCutoff = hdmfEmployerVal / deductionDivisor;
+
+        const totalEmployerMatch = sssEmployerCutoff + philhealthEmployerCutoff + hdmfEmployerCutoff;
+
+        document.getElementById('displaySssEmployer').innerText = "₱" + formatNum(sssEmployerCutoff);
+        document.getElementById('displayPhilhealthEmployer').innerText = "₱" + formatNum(philhealthEmployerCutoff);
+        document.getElementById('displayHdmfEmployer').innerText = "₱" + formatNum(hdmfEmployerCutoff);
+        document.getElementById('displayEmployerTotal').innerText = "₱" + formatNum(totalEmployerMatch);
+    }
+
+    function refreshBadgeUi() {
+        const statutoryFields = ['sss', 'hdmf', 'philhealth', 'tax', 'dependent'];
+        let countManual = 0;
+
+        statutoryFields.forEach(field => {
+            const badge = document.getElementById('labelBadge' + capitalize(field));
+            const btn = document.getElementById('lock' + capitalize(field));
+
+            if (overrideStates[field]) {
+                badge.innerText = "MANUAL";
+                badge.className = "text-[9px] px-1.5 py-0.2 font-semibold rounded-full bg-amber-50 text-amber-700 font-mono no-print";
+                btn.classList.remove('opacity-0', 'pointer-events-none');
+                btn.classList.add('opacity-100');
+                if (field !== 'dependent') countManual++;
+            } else {
+                badge.innerText = "AUTO";
+                badge.className = "text-[9px] px-1.5 py-0.2 font-semibold rounded-full bg-blue-50 text-blue-700 font-mono no-print";
+                btn.classList.add('opacity-0', 'pointer-events-none');
+                btn.classList.remove('opacity-100');
+            }
+        });
+
+        const alertBadge = document.getElementById('overrideBadgeSpan');
+        if (countManual > 0) {
+            alertBadge.innerText = `✍️ Manual Override Active (${countManual} custom edits)`;
+            alertBadge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100";
+        } else {
+            alertBadge.innerText = "⚡ Active Auto-Calculation Mode";
+            alertBadge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100";
+        }
+    }
+
+    // Dynamic mathematical calculations explainer updating
+    function updateMathExplainer(grossPay, statDeductions, taxableIncome, taxObj) {
+        document.getElementById('taxStep1').innerText = `Gross Salary Cutoff: ₱${formatNum(grossPay)}`;
+        document.getElementById('taxStep2').innerText = `SSS + PhH + Pag-IBIG: - ₱${formatNum(statDeductions)}`;
+        document.getElementById('taxStep3').innerText = `Net Taxable Base:  ₱${formatNum(taxableIncome)}`;
+        
+        document.getElementById('taxStep4Text').innerText = `${taxObj.formula}`;
+        document.getElementById('taxStep4Math').innerText = `Withholding Tax: ₱${formatNum(taxObj.taxAmount)}`;
+    }
+
+    // Highlighting current BIR reference row
+    function highlightBirTableRow(bracketId) {
+        // Reset backgrounds of all reference rows
+        for (let i = 1; i <= 6; i++) {
+            document.getElementById('birRow' + i).className = "";
+        }
+        // Highlight active row
+        document.getElementById('birRow' + bracketId).className = "bg-blue-50 border-l-4 border-blue-600 font-medium text-slate-900 transition-all";
+    }
+
+    // Helper functions
+    function formatNum(num) {
+        return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function capitalize(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+
+    // Initialization trigger
+    window.onload = function() {
+        calculateAll();
+    };
+</script>
+
+</body>
+</html>
